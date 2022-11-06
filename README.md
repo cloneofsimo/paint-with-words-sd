@@ -104,4 +104,4 @@ img.save(settings["output_img_path"])
 
 ```
 
-Please DO HAVE A LOOK at the code!
+There is minimal working example in `runner.py` that is self contained. Plase have a look!
