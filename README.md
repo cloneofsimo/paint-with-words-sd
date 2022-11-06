@@ -1,4 +1,4 @@
-# Paint with Words, Implemented with Stable diffusion
+# Paint-with-Words, Implemented with Stable diffusion
 
 <!-- #region -->
 <p align="center">
@@ -49,3 +49,59 @@ pip install git+https://github.com/cloneofsimo/paint-with-words-sd.git
 # Basic Usage
 
 Before running, fill in the variable `HF_TOKEN` in `.env` file with Huggingface token for Stable Diffusion, and load_dotenv().
+
+Prepare segmentation map, and map-color : tag label such as below. keys are (R, G, B) format, and values are tag label.
+
+```python
+{
+    (0, 0, 0): "cat,1.0",
+    (255, 255, 255): "dog,1.0",
+    (13, 255, 0): "tree,1.5",
+    (90, 206, 255): "sky,0.2",
+    (74, 18, 1): "ground,0.2",
+}
+```
+
+You neeed to have them so that they are in format "{label},{strength}", where strength is additional weight of the attention score you will give during generation, i.e., it will have more effect.
+
+```python
+
+import dotenv
+from PIL import Image
+
+from paint_with_words import paint_with_words
+
+settings = {
+    "color_context": {
+        (0, 0, 0): "cat,1.0",
+        (255, 255, 255): "dog,1.0",
+        (13, 255, 0): "tree,1.5",
+        (90, 206, 255): "sky,0.2",
+        (74, 18, 1): "ground,0.2",
+    },
+    "color_map_img_path": "contents/example_input.png",
+    "input_prompt": "realistic photo of a dog, cat, tree, with beautiful sky, on sandy ground",
+    "output_img_path": "contents/output_cat_dog.png",
+}
+
+
+dotenv.load_dotenv()
+
+color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB")
+color_context = settings["color_context"]
+input_prompt = settings["input_prompt"]
+
+img = paint_with_words(
+    color_context=color_context,
+    color_map_image=color_map_image,
+    input_prompt=input_prompt,
+    num_inference_steps=30,
+    guidance_scale=7.5,
+    device="cuda:0",
+)
+
+img.save(settings["output_img_path"])
+
+```
+
+Please DO HAVE A LOOK at the code!

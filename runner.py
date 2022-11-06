@@ -1,7 +1,7 @@
-from paint_with_words import paint_with_words
-from PIL import Image
 import dotenv
-import os
+from PIL import Image
+
+from paint_with_words import paint_with_words
 
 EXAMPLE_SETTING_1 = {
     "color_context": {
