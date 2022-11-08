@@ -1,18 +1,24 @@
 # Paint-with-Words, Implemented with Stable diffusion
 
-<!-- #region -->
-<p align="center">
-<img  src="contents/dog_cat.jpg">
-</p>
-<!-- #endregion -->
+## Subtle Control of the Image Generation
 
 <!-- #region -->
 <p align="center">
-<img  src="contents/cat_dog.jpg">
+<img  src="contents/rabbit_mage.jpg">
 </p>
 <!-- #endregion -->
 
-> "realistic photo of a dog, cat, tree, with beautiful sky, on sandy ground"
+> Notice how without PwW the cloud is missing.
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/road.jpg">
+</p>
+<!-- #endregion -->
+
+> Notice how without PwW, abandoned city is missing, and road becomes purple as well.
+
+## Shift the object : Same seed, just the segmentation map's positional difference
 
 <!-- #region -->
 <p align="center">
@@ -27,6 +33,8 @@
 <!-- #endregion -->
 
 > "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed."
+
+> Notice how nearly all of the composition remains the same, other than the position of the moon.
 
 ---
 
