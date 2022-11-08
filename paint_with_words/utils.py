@@ -73,7 +73,6 @@ def fig_from_settings(
 
     # write input prompt
     draw = ImageDraw.Draw(fig)
-    # draw.text((5, color_map_image.height // 2 + 5), input_prompt, (0, 0, 0), font=font)
 
     lines = textwrap.wrap(input_prompt, width=15)
     w, h = 10, color_map_image.height // 2 + 5

@@ -187,7 +187,7 @@ def paint_with_words(
     seed: int = 0,
     scheduler_type=LMSDiscreteScheduler,
     device: str = "cuda:0",
-    weight_function: Callable = lambda w, sigma, qk: 0.3
+    weight_function: Callable = lambda w, sigma, qk: 0.1
     * w
     * math.log(sigma + 1)
     * qk.max(),
