@@ -1,15 +1,19 @@
 import math
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple, Callable, Optional
 
 import numpy as np
 import PIL
 import torch
 import torch.nn.functional as F
-import torchvision
-from diffusers import (AutoencoderKL, DDIMScheduler, LMSDiscreteScheduler,
-                       PNDMScheduler, StableDiffusionImg2ImgPipeline,
-                       UNet2DConditionModel)
+from diffusers import (
+    AutoencoderKL,
+    DDIMScheduler,
+    LMSDiscreteScheduler,
+    PNDMScheduler,
+    StableDiffusionImg2ImgPipeline,
+    UNet2DConditionModel,
+)
 from dotenv import load_dotenv
 from PIL import Image
 from tqdm.auto import tqdm
@@ -59,19 +63,18 @@ def inj_forward(self, hidden_states, context=None, mask=None):
     value = self.reshape_heads_to_batch_dim(value)
 
     attention_scores = torch.matmul(query, key.transpose(-1, -2))
-    attention_scores_max_scalar = attention_scores.max()
+
     attention_size_of_img = attention_scores.shape[-2]
     if context is not None:
-        # cross_attention_weight =
-        cross_attention_weight = (
-            context[f"CROSS_ATTENTION_WEIGHT_{attention_size_of_img}"]
-            * math.log(1 + context["SIGMA"])
-            * attention_scores_max_scalar
-        )
-        # print("CROSS_ATTENTION_WEIGHT", cross_attention_weight.shape)
+        f: Callable = context["WEIGHT_FUNCTION"]
+        w = context[f"CROSS_ATTENTION_WEIGHT_{attention_size_of_img}"]
+        sigma = context["SIGMA"]
+
+        cross_attention_weight = f(w, sigma, attention_scores)
+
     else:
         cross_attention_weight = 0.0
-    # print("ATTENTION_SCORE", attention_scores.shape)
+
     attention_scores = (attention_scores + cross_attention_weight) * self.scale
 
     attention_probs = attention_scores.softmax(dim=-1)
@@ -79,16 +82,16 @@ def inj_forward(self, hidden_states, context=None, mask=None):
     hidden_states = torch.matmul(attention_probs, value)
 
     hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
-    
-    #linear proj
+
+    # linear proj
     hidden_states = self.to_out[0](hidden_states)
-    #dropout
+    # dropout
     hidden_states = self.to_out[1](hidden_states)
 
     return hidden_states
 
 
-def _load_tools(device: str, scheduler_type):
+def pww_load_tools(device: str, scheduler_type):
 
     vae = AutoencoderKL.from_pretrained(
         "CompVis/stable-diffusion-v1-4",
@@ -189,8 +192,15 @@ def paint_with_words(
     seed: int = 0,
     scheduler_type=LMSDiscreteScheduler,
     device: str = "cuda:0",
+    weight_function: Callable = lambda w, sigma, qk: w * math.log(sigma + 1) * qk.max(),
+    preloaded_utils: Optional[Tuple] = None,
 ):
-    vae, unet, text_encoder, tokenizer, scheduler = _load_tools(device, scheduler_type)
+
+    vae, unet, text_encoder, tokenizer, scheduler = (
+        pww_load_tools(device, scheduler_type)
+        if preloaded_utils is None
+        else preloaded_utils
+    )
 
     generator = torch.manual_seed(seed)
 
@@ -256,6 +266,7 @@ def paint_with_words(
                 "CROSS_ATTENTION_WEIGHT_256": temp_cross_attention_bias_256,
                 "CROSS_ATTENTION_WEIGHT_64": temp_cross_attention_bias_64,
                 "SIGMA": sigma,
+                "WEIGHT_FUNCTION": weight_function,
             },
         ).sample
 
