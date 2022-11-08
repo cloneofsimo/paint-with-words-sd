@@ -112,27 +112,27 @@ In the paper, they used $w \log (1 + \sigma)  \max (Q^T K)$ to scale appropriate
 
 <!-- #region -->
 <p align="center">
-<img  src="contents/compare_std.png">
+<img  src="contents/compare_std.jpg">
 </p>
 <!-- #endregion -->
 
-> $w \log (1 + \sigma)  std (Q^T K)$
+> $w' = w \log (1 + \sigma)  std (Q^T K)$
 
 <!-- #region -->
 <p align="center">
-<img  src="contents/compare_max.png">
+<img  src="contents/compare_max.jpg">
 </p>
 <!-- #endregion -->
 
-> $w \log (1 + \sigma)  \max (Q^T K)$
+> $w' = w \log (1 + \sigma)  \max (Q^T K)$
 
 <!-- #region -->
 <p align="center">
-<img  src="contents/compare_log2_std.png">
+<img  src="contents/compare_log2_std.jpg">
 </p>
 <!-- #endregion -->
 
-> $w \log (1 + \sigma^2)  std (Q^T K)$
+> $w' = w \log (1 + \sigma^2)  std (Q^T K)$
 
 You can define your own weight function and further tweak the configurations by defining `weight_function` argument in `paint_with_words`.
 
@@ -152,3 +152,29 @@ img = paint_with_words(
     weight_function=w_f
 )
 ```
+
+## More on the weight function, (but higher)
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/compare_4_std.jpg">
+</p>
+<!-- #endregion -->
+
+> $w' = w \log (1 + \sigma)  std (Q^T K)$
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/compare_4_max.jpg">
+</p>
+<!-- #endregion -->
+
+> $w' = w \log (1 + \sigma)  \max (Q^T K)$
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/compare_4_log2_std.jpg">
+</p>
+<!-- #endregion -->
+
+> $w' = w \log (1 + \sigma^2)  std (Q^T K)$
