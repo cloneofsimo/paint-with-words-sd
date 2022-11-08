@@ -1,6 +1,9 @@
+import functools
+import inspect
 import math
 import os
-from typing import Dict, List, Tuple, Callable, Optional
+import sys
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import PIL
@@ -8,16 +11,29 @@ import torch
 import torch.nn.functional as F
 from diffusers import (
     AutoencoderKL,
-    DDIMScheduler,
     LMSDiscreteScheduler,
-    PNDMScheduler,
-    StableDiffusionImg2ImgPipeline,
     UNet2DConditionModel,
 )
 from dotenv import load_dotenv
 from PIL import Image
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
+
+# https://stackoverflow.com/questions/21379163/how-to-silence-a-functions-output-to-console
+def _supress_print(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # print inspect.getouterframes(inspect.currentframe())[3][3], func.__name__
+        if inspect.getouterframes(inspect.currentframe())[3][3] != "main":
+            stdout = sys.stdout
+            sys.stdout = open(os.devnull, "w")
+            val = func(*args, **kwargs)
+            sys.stdout = stdout
+            return val
+        else:
+            return func(*args, **kwargs)
+
+    return wrapper
 
 
 def _img_importance_flatten(img: torch.tensor, ratio: int) -> torch.tensor:
@@ -91,7 +107,8 @@ def inj_forward(self, hidden_states, context=None, mask=None):
     return hidden_states
 
 
-def pww_load_tools(device: str, scheduler_type):
+@_supress_print
+def pww_load_tools(device: str = "cuda:0", scheduler_type=LMSDiscreteScheduler):
 
     vae = AutoencoderKL.from_pretrained(
         "CompVis/stable-diffusion-v1-4",
@@ -282,6 +299,7 @@ def paint_with_words(
                 "CROSS_ATTENTION_WEIGHT_256": 0,
                 "CROSS_ATTENTION_WEIGHT_64": 0,
                 "SIGMA": sigma,
+                "WEIGHT_FUNCTION": lambda w, sigma, qk: 0.0,
             },
         ).sample
 
