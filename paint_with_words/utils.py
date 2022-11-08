@@ -1,12 +1,18 @@
 import math
 import os
+import textwrap
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 
-def fig_from_settings(settings: Dict[str, Any]):
+def fig_from_settings(
+    settings: Dict[str, Any],
+    generated_imgs: List[Image.Image],
+    optional_captions: Optional[List[str]] = None,
+    offset: int = 150,
+) -> Image.Image:
 
     # create before-after figure from settings
     color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB")
@@ -14,8 +20,6 @@ def fig_from_settings(settings: Dict[str, Any]):
     input_prompt = settings["input_prompt"]
 
     draw = ImageDraw.Draw(color_map_image)
-
-    output_img = Image.open(settings["output_img_path"]).convert("RGB")
 
     try:
         font = ImageFont.truetype("arial.ttf", 16)
@@ -46,14 +50,37 @@ def fig_from_settings(settings: Dict[str, Any]):
     # merge color map image and output image
     fig = Image.new(
         "RGB",
-        (color_map_image.width + output_img.width, color_map_image.height + 30),
+        (
+            color_map_image.width
+            + len(generated_imgs) * generated_imgs[0].width
+            + offset,
+            color_map_image.height + 60,
+        ),
         (255, 255, 255),
     )
-    fig.paste(color_map_image, (0, 0))
-    fig.paste(output_img, (color_map_image.width, 0))
+    fig.paste(color_map_image, (offset, 30))
+    draw = ImageDraw.Draw(fig)
+    for i, img in enumerate(generated_imgs):
+        fig.paste(img, (color_map_image.width + offset + i * img.width, 30))
+        # optionally write captions
+        if optional_captions is not None:
+            draw.text(
+                (color_map_image.width + offset + i * img.width, 10),
+                optional_captions[i],
+                (0, 0, 0),
+                font=font,
+            )
 
     # write input prompt
     draw = ImageDraw.Draw(fig)
-    draw.text((5, color_map_image.height + 5), input_prompt, (0, 0, 0), font=font)
+    # draw.text((5, color_map_image.height // 2 + 5), input_prompt, (0, 0, 0), font=font)
+
+    lines = textwrap.wrap(input_prompt, width=15)
+    w, h = 10, color_map_image.height // 2 + 5
+    y_text = h
+    for line in lines:
+        width, height = font.getsize(line)
+        draw.text((w, y_text), line, font=font, fill=(0, 0, 0))
+        y_text += height
 
     return fig
