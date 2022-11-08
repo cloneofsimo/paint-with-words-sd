@@ -30,9 +30,9 @@
 
 ---
 
-Very recently, researchers from NVIDIA proposed [eDiffi](https://arxiv.org/abs/2211.01324). In the paper, they suggested method that allows "painting with word". Basically, this is like make-a-scene, but with just using adjusted cross-attention score. You can see the results and detailed method in the paper.
+Recently, researchers from NVIDIA proposed [eDiffi](https://arxiv.org/abs/2211.01324). In the paper, they suggested method that allows "painting with word". Basically, this is like make-a-scene, but with just using adjusted cross-attention score. You can see the results and detailed method in the paper.
 
-Unfortunately, their paper and their method was not open-sourced. Yet, paint-with-words can be implemented with Stable Diffusion since they share common Cross Attention module. So, I implemented it with Stable Diffusion.
+Their paper and their method was not open-sourced. Yet, paint-with-words can be implemented with Stable Diffusion since they share common Cross Attention module. So, I implemented it with Stable Diffusion.
 
 <!-- #region -->
 <p align="center">
@@ -104,4 +104,51 @@ img.save(settings["output_img_path"])
 
 ```
 
-There is minimal working example in `runner.py` that is self contained. Plase have a look!
+There is minimal working example in `runner.py` that is self contained. Please have a look!
+
+# Weight Scaling
+
+In the paper, they used $w \log (1 + \sigma)  \max (Q^T K)$ to scale appropriate attention weight. However, this wasn't optimal after few tests, found by [CookiePPP](https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/4406). You can check out the effect of the functions below:
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/compare_std.png">
+</p>
+<!-- #endregion -->
+
+> $w \log (1 + \sigma)  std (Q^T K)$
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/compare_max.png">
+</p>
+<!-- #endregion -->
+
+> $w \log (1 + \sigma)  \max (Q^T K)$
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/compare_log2_std.png">
+</p>
+<!-- #endregion -->
+
+> $w \log (1 + \sigma^2)  std (Q^T K)$
+
+You can define your own weight function and further tweak the configurations by defining `weight_function` argument in `paint_with_words`.
+
+Example:
+
+```python
+w_f = lambda w, sigma, qk: 0.4 * w * math.log(sigma**2 + 1) * qk.std()
+
+img = paint_with_words(
+    color_context=color_context,
+    color_map_image=color_map_image,
+    input_prompt=input_prompt,
+    num_inference_steps=20,
+    guidance_scale=7.5,
+    device="cuda:0",
+    preloaded_utils=loaded,
+    weight_function=w_f
+)
+```
