@@ -79,8 +79,13 @@ def inj_forward(self, hidden_states, context=None, mask=None):
     hidden_states = torch.matmul(attention_probs, value)
 
     hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
+    
+    #linear proj
+    hidden_states = self.to_out[0](hidden_states)
+    #dropout
+    hidden_states = self.to_out[1](hidden_states)
 
-    return self.to_out(hidden_states)
+    return hidden_states
 
 
 def _load_tools(device: str, scheduler_type):
