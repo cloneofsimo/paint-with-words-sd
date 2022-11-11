@@ -186,3 +186,22 @@ img = paint_with_words(
 <!-- #endregion -->
 
 > $w' = w \log (1 + \sigma^2)  std (Q^T K)$
+
+# TODO
+
+*I'll work on these after school exam is over*
+
+- [ ] Make extensive comparisons for different weight scaling functions.
+- [ ] Create word latent-based cross-attention generations.
+- [ ] Check if statement "making background weight smaller is better" is justifiable, by using some standard metrics
+- [ ] Create AUTOMATIC1111's interface
+- [ ] Create Gradio interface
+- [ ] Create tutorial
+- [ ] See if starting with some "known image latent" is helpful. If it is, we might as well hard-code some initial latent.
+- [ ] Region based seeding, where we set seed for each regions. Can be simply implemented with extra argument in `COLOR_CONTEXT`
+- [ ] sentence wise text seperation. Currently token is the smallest unit that influences cross-attention. This needs to be fixed. (Can be done pretty trivially)
+- [ ] Allow different models to be used. use [this](https://github.com/huggingface/diffusers/blob/main/scripts/convert_original_stable_diffusion_to_diffusers.py).
+- [ ] "negative region", where we can set some region to "not" have some semantics. can be done with classifier-free guidance.
+- [ ] Img2ImgPaintWithWords -> Img2Img, but with extra text segmentation map for better control
+- [ ] InpaintPaintwithWords -> inpaint, but with extra text segmentation map for better control
+- [ ] Support for other schedulers
