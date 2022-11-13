@@ -226,6 +226,7 @@ def paint_with_words(
     local_model_path: Optional[str] = None,
     hf_model_path: Optional[str] = "CompVis/stable-diffusion-v1-4",
     preloaded_utils: Optional[Tuple] = None,
+    unconditional_input_prompt: str = "",
 ):
 
     vae, unet, text_encoder, tokenizer, scheduler = (
@@ -270,7 +271,7 @@ def paint_with_words(
 
     max_length = text_input.input_ids.shape[-1]
     uncond_input = tokenizer(
-        [""] * 1,
+        [unconditional_input_prompt],
         padding="max_length",
         max_length=max_length,
         return_tensors="pt",
