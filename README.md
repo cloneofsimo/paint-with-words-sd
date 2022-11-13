@@ -187,6 +187,41 @@ img = paint_with_words(
 
 > $w' = w \log (1 + \sigma^2)  std (Q^T K)$
 
+# Using other Fine-tuned models
+
+If you are from Automatic1111 community, you maybe used to using native LDM checkpoint formats, not diffuser-checkpoint format. Luckily, there is a quick script that allows conversion.
+[this](https://github.com/huggingface/diffusers/blob/main/scripts/convert_original_stable_diffusion_to_diffusers.py).
+
+```bash
+python change_model_path.py --checkpoint_path custom_model.ckpt --scheduler_type ddim --dump_path custom_model_diffusion_format
+```
+
+Now, use the converted model in `paint_with_words` function.
+
+```python
+from paint_with_words import paint_with_words, pww_load_tools
+
+loaded = pww_load_tools(
+    "cuda:0",
+    scheduler_type=LMSDiscreteScheduler,
+    local_model_path="./custom_model_diffusion_format"
+)
+#...
+img = paint_with_words(
+    color_context=color_context,
+    color_map_image=color_map_image,
+    input_prompt=input_prompt,
+    num_inference_steps=30,
+    guidance_scale=7.5,
+    device="cuda:0",
+    weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
+    preloaded_utils=loaded
+)
+```
+
+
+
+
 # TODO
 
 *I'll work on these after school exam is over*
@@ -200,7 +235,7 @@ img = paint_with_words(
 - [ ] See if starting with some "known image latent" is helpful. If it is, we might as well hard-code some initial latent.
 - [ ] Region based seeding, where we set seed for each regions. Can be simply implemented with extra argument in `COLOR_CONTEXT`
 - [ ] sentence wise text seperation. Currently token is the smallest unit that influences cross-attention. This needs to be fixed. (Can be done pretty trivially)
-- [ ] Allow different models to be used. use [this](https://github.com/huggingface/diffusers/blob/main/scripts/convert_original_stable_diffusion_to_diffusers.py).
+- [x] Allow different models to be used. use [this](https://github.com/huggingface/diffusers/blob/main/scripts/convert_original_stable_diffusion_to_diffusers.py).
 - [ ] "negative region", where we can set some region to "not" have some semantics. can be done with classifier-free guidance.
 - [ ] Img2ImgPaintWithWords -> Img2Img, but with extra text segmentation map for better control
 - [ ] InpaintPaintwithWords -> inpaint, but with extra text segmentation map for better control

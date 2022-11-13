@@ -86,23 +86,43 @@ def inj_forward(self, hidden_states, context=None, mask=None):
     return hidden_states
 
 
-def pww_load_tools(device: str = "cuda:0", scheduler_type=LMSDiscreteScheduler):
+def pww_load_tools(
+    device: str = "cuda:0",
+    scheduler_type=LMSDiscreteScheduler,
+    local_model_path: Optional[str] = None,
+    hf_model_path: Optional[str] = None,
+) -> Tuple[
+    UNet2DConditionModel,
+    CLIPTextModel,
+    CLIPTokenizer,
+    AutoencoderKL,
+    LMSDiscreteScheduler,
+]:
 
+    assert (
+        local_model_path or hf_model_path
+    ), "either local_model_path or hf_model_path must be provided"
+
+    model_path = local_model_path if local_model_path is not None else hf_model_path
+    local_path_only = local_model_path is not None
+    print(model_path)
     vae = AutoencoderKL.from_pretrained(
-        "CompVis/stable-diffusion-v1-4",
+        model_path,
         subfolder="vae",
         use_auth_token=os.getenv("HF_TOKEN"),
         torch_dtype=torch.float16,
+        local_files_only=local_path_only,
     )
 
     tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
     text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14")
 
     unet = UNet2DConditionModel.from_pretrained(
-        "CompVis/stable-diffusion-v1-4",
+        model_path,
         subfolder="unet",
         use_auth_token=os.getenv("HF_TOKEN"),
         torch_dtype=torch.float16,
+        # local_files_only=local_path_only,
     )
 
     vae.to(device), unet.to(device), text_encoder.to(device)
@@ -191,11 +211,18 @@ def paint_with_words(
     * w
     * math.log(sigma + 1)
     * qk.max(),
+    local_model_path: Optional[str] = None,
+    hf_model_path: Optional[str] = "CompVis/stable-diffusion-v1-4",
     preloaded_utils: Optional[Tuple] = None,
 ):
 
     vae, unet, text_encoder, tokenizer, scheduler = (
-        pww_load_tools(device, scheduler_type)
+        pww_load_tools(
+            device,
+            scheduler_type,
+            local_model_path=local_model_path,
+            hf_model_path=hf_model_path,
+        )
         if preloaded_utils is None
         else preloaded_utils
     )
