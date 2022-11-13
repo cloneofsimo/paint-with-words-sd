@@ -144,32 +144,37 @@ def pww_load_tools(
 def _image_context_seperator(
     img: Image.Image, color_context: dict, _tokenizer
 ) -> List[Tuple[List[int], torch.Tensor]]:
-    w, h = img.size
-    w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
-    img = img.resize((w, h), resample=PIL.Image.LANCZOS)
 
     ret_lists = []
-    for color, v in color_context.items():
-        v, f = v.split(",")
-        f = float(f)
-        v_input = _tokenizer(
-            v,
-            max_length=_tokenizer.model_max_length,
-            truncation=True,
-        )
-        v_as_tokens = v_input["input_ids"][1:-1]
-        if isinstance(color, str):
-            r, g, b = color[1:3], color[3:5], color[5:7]
-            color = (int(r, 16), int(g, 16), int(b, 16))
 
-        img_where_color = (np.array(img) == color).all(axis=-1)
+    if img is not None:
+        w, h = img.size
+        w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
+        img = img.resize((w, h), resample=PIL.Image.LANCZOS)
 
-        if not img_where_color.sum() > 0:
-            print(f"Warning : not a single color {color} not found in image")
+        for color, v in color_context.items():
+            v, f = v.split(",")
+            f = float(f)
+            v_input = _tokenizer(
+                v,
+                max_length=_tokenizer.model_max_length,
+                truncation=True,
+            )
+            v_as_tokens = v_input["input_ids"][1:-1]
+            if isinstance(color, str):
+                r, g, b = color[1:3], color[3:5], color[5:7]
+                color = (int(r, 16), int(g, 16), int(b, 16))
 
-        img_where_color = torch.tensor(img_where_color, dtype=torch.float32) * f
+            img_where_color = (np.array(img) == color).all(axis=-1)
 
-        ret_lists.append((v_as_tokens, img_where_color))
+            if not img_where_color.sum() > 0:
+                print(f"Warning : not a single color {color} not found in image")
+
+            img_where_color = torch.tensor(img_where_color, dtype=torch.float32) * f
+
+            ret_lists.append((v_as_tokens, img_where_color))
+    else:
+        w, h = 512, 512
 
     if len(ret_lists) == 0:
         ret_lists.append(([-1], torch.zeros((w, h), dtype=torch.float32)))
@@ -206,10 +211,10 @@ def _tokens_img_attention_weight(
 @torch.no_grad()
 @torch.autocast("cuda")
 def paint_with_words(
-    color_context: Dict[Tuple[int, int, int], str],
-    color_map_image: Image.Image,
-    input_prompt: str,
-    num_inference_steps: int,
+    color_context: Dict[Tuple[int, int, int], str] = {},
+    color_map_image: Optional[Image.Image] = None,
+    input_prompt: str = "",
+    num_inference_steps: int = 30,
     guidance_scale: float = 7.5,
     seed: int = 0,
     scheduler_type=LMSDiscreteScheduler,
