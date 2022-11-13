@@ -158,15 +158,21 @@ def _image_context_seperator(
             truncation=True,
         )
         v_as_tokens = v_input["input_ids"][1:-1]
+        if isinstance(color, str):
+            r, g, b = color[1:3], color[3:5], color[5:7]
+            color = (int(r, 16), int(g, 16), int(b, 16))
 
         img_where_color = (np.array(img) == color).all(axis=-1)
-        assert (
-            img_where_color.sum() > 0
-        ), f"not a single color {color} not found in image"
+
+        if not img_where_color.sum() > 0:
+            print(f"Warning : not a single color {color} not found in image")
+
         img_where_color = torch.tensor(img_where_color, dtype=torch.float32) * f
 
         ret_lists.append((v_as_tokens, img_where_color))
 
+    if len(ret_lists) == 0:
+        ret_lists.append(([-1], torch.zeros((w, h), dtype=torch.float32)))
     return ret_lists, w, h
 
 
@@ -191,7 +197,8 @@ def _tokens_img_attention_weight(
                     img_where_color, ratio
                 ).reshape(-1)
 
-        assert is_in == 1, f"token {v_as_tokens} not found in text"
+        if not is_in == 1:
+            print(f"Warning ratio {ratio} : token {v_as_tokens} not found in text")
 
     return ret_tensor
 
