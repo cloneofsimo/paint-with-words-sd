@@ -2,3 +2,4 @@ _debug*
 .env
 __pycache__
 _sc.py
+*.ckpt
