@@ -1,3 +1,5 @@
+import math
+
 import dotenv
 from PIL import Image
 
@@ -73,6 +75,7 @@ if __name__ == "__main__":
         num_inference_steps=30,
         guidance_scale=7.5,
         device="cuda:0",
+        weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
     )
 
     img.save(settings["output_img_path"])
