@@ -219,12 +219,15 @@ img = paint_with_words(
 )
 ```
 
+---
 
+### Notebook
 
+you can view the notebook [here](./contents/notebooks/paint_with_words.ipynb) or [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MZfGaY3aQQn5_T-6bkXFE1rI59A2nJlU?usp=sharing)
 
 # TODO
 
-*I'll work on these after school exam is over*
+_I'll work on these after school exam is over_
 
 - [ ] Make extensive comparisons for different weight scaling functions.
 - [ ] Create word latent-based cross-attention generations.
