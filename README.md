@@ -114,6 +114,12 @@ img.save(settings["output_img_path"])
 
 There is minimal working example in `runner.py` that is self contained. Please have a look!
 
+## Notebook
+
+you can view the notebook [here](./contents/notebooks/paint_with_words.ipynb) or [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MZfGaY3aQQn5_T-6bkXFE1rI59A2nJlU?usp=sharing)
+
+---
+
 # Weight Scaling
 
 In the paper, they used $w \log (1 + \sigma)  \max (Q^T K)$ to scale appropriate attention weight. However, this wasn't optimal after few tests, found by [CookiePPP](https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/4406). You can check out the effect of the functions below:
@@ -220,10 +226,6 @@ img = paint_with_words(
 ```
 
 ---
-
-### Notebook
-
-you can view the notebook [here](./contents/notebooks/paint_with_words.ipynb) or [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MZfGaY3aQQn5_T-6bkXFE1rI59A2nJlU?usp=sharing)
 
 # TODO
 
