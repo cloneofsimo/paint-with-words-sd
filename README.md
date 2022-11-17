@@ -114,10 +114,6 @@ img.save(settings["output_img_path"])
 
 There is minimal working example in `runner.py` that is self contained. Please have a look!
 
-## Notebook
-
-you can view the notebook [here](./contents/notebooks/paint_with_words.ipynb) or [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MZfGaY3aQQn5_T-6bkXFE1rI59A2nJlU?usp=sharing)
-
 ---
 
 # Weight Scaling
@@ -224,6 +220,14 @@ img = paint_with_words(
     preloaded_utils=loaded
 )
 ```
+
+# Example Notebooks
+
+You can view the minimal working notebook [here](./contents/notebooks/paint_with_words.ipynb) or [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MZfGaY3aQQn5_T-6bkXFE1rI59A2nJlU?usp=sharing)
+
+* [Painting with words](./contents/notebooks/paint_with_words.ipynb)
+
+* [Painting with words + Textual Inversion](./contents/notebooks/paint_with_words_textual_inversion.ipynb)
 
 ---
 

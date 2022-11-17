@@ -3,3 +3,4 @@ _debug*
 __pycache__
 _sc.py
 *.ckpt
+*.bin
