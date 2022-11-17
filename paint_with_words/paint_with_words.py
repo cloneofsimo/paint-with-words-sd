@@ -91,6 +91,7 @@ def pww_load_tools(
     scheduler_type=LMSDiscreteScheduler,
     local_model_path: Optional[str] = None,
     hf_model_path: Optional[str] = None,
+    model_token: Optional[str] = None,
 ) -> Tuple[
     UNet2DConditionModel,
     CLIPTextModel,
@@ -109,7 +110,7 @@ def pww_load_tools(
     vae = AutoencoderKL.from_pretrained(
         model_path,
         subfolder="vae",
-        use_auth_token=os.getenv("HF_TOKEN"),
+        use_auth_token=model_token,
         torch_dtype=torch.float16,
         local_files_only=local_path_only,
     )
@@ -120,9 +121,9 @@ def pww_load_tools(
     unet = UNet2DConditionModel.from_pretrained(
         model_path,
         subfolder="unet",
-        use_auth_token=os.getenv("HF_TOKEN"),
+        use_auth_token=model_token,
         torch_dtype=torch.float16,
-        # local_files_only=local_path_only,
+        local_files_only=local_path_only,
     )
 
     vae.to(device), unet.to(device), text_encoder.to(device)
@@ -227,6 +228,7 @@ def paint_with_words(
     hf_model_path: Optional[str] = "CompVis/stable-diffusion-v1-4",
     preloaded_utils: Optional[Tuple] = None,
     unconditional_input_prompt: str = "",
+    model_token: Optional[str] = os.environ.get("HF_TOKEN"),
 ):
 
     vae, unet, text_encoder, tokenizer, scheduler = (
@@ -235,6 +237,7 @@ def paint_with_words(
             scheduler_type,
             local_model_path=local_model_path,
             hf_model_path=hf_model_path,
+            model_token=model_token,
         )
         if preloaded_utils is None
         else preloaded_utils
