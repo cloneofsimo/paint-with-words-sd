@@ -1,7 +1,5 @@
-import functools
-import inspect
+
 import math
-import os
 from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -9,7 +7,6 @@ import PIL
 import torch
 import torch.nn.functional as F
 from diffusers import AutoencoderKL, LMSDiscreteScheduler, UNet2DConditionModel
-from dotenv import load_dotenv
 from PIL import Image
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
@@ -228,7 +225,7 @@ def paint_with_words(
     hf_model_path: Optional[str] = "CompVis/stable-diffusion-v1-4",
     preloaded_utils: Optional[Tuple] = None,
     unconditional_input_prompt: str = "",
-    model_token: Optional[str] = os.environ.get("HF_TOKEN"),
+    model_token: Optional[str] = None,
 ):
 
     vae, unet, text_encoder, tokenizer, scheduler = (
@@ -257,13 +254,13 @@ def paint_with_words(
         color_map_image, color_context, tokenizer
     )
 
-    cross_attention_weight_4096 = _tokens_img_attention_weight(
+    cross_attention_weight_8 = _tokens_img_attention_weight(
         seperated_word_contexts, text_input, ratio=8
     ).to(device)
-    cross_attention_weight_1024 = _tokens_img_attention_weight(
+    cross_attention_weight_16 = _tokens_img_attention_weight(
         seperated_word_contexts, text_input, ratio=16
     ).to(device)
-    cross_attention_weight_256 = _tokens_img_attention_weight(
+    cross_attention_weight_32 = _tokens_img_attention_weight(
         seperated_word_contexts, text_input, ratio=32
     ).to(device)
     cross_attention_weight_64 = _tokens_img_attention_weight(
@@ -302,10 +299,10 @@ def paint_with_words(
             t,
             encoder_hidden_states={
                 "CONTEXT_TENSOR": cond_embeddings,
-                "CROSS_ATTENTION_WEIGHT_4096": cross_attention_weight_4096,
-                "CROSS_ATTENTION_WEIGHT_1024": cross_attention_weight_1024,
-                "CROSS_ATTENTION_WEIGHT_256": cross_attention_weight_256,
-                "CROSS_ATTENTION_WEIGHT_64": cross_attention_weight_64,
+                f"CROSS_ATTENTION_WEIGHT_{height * width // 64}": cross_attention_weight_8,
+                f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": cross_attention_weight_16,
+                f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
+                f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
                 "SIGMA": sigma,
                 "WEIGHT_FUNCTION": weight_function,
             },
