@@ -1,4 +1,3 @@
-
 import math
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -194,14 +193,18 @@ def _tokens_img_attention_weight(
         is_in = 0
 
         for idx, tok in enumerate(token_lis):
-            if tok in v_as_tokens:
+            if token_lis[idx : idx + len(v_as_tokens)] == v_as_tokens:
                 is_in = 1
-                ret_tensor[:, idx] += _img_importance_flatten(
-                    img_where_color, ratio
-                ).reshape(-1)
+
+                # print(token_lis[idx : idx + len(v_as_tokens)], v_as_tokens)
+                ret_tensor[:, idx : idx + len(v_as_tokens)] += (
+                    _img_importance_flatten(img_where_color, ratio)
+                    .reshape(-1, 1)
+                    .repeat(1, len(v_as_tokens))
+                )
 
         if not is_in == 1:
-            print(f"Warning ratio {ratio} : token {v_as_tokens} not found in text")
+            print(f"Warning ratio {ratio} : tokens {v_as_tokens} not found in text")
 
     return ret_tensor
 
@@ -299,7 +302,7 @@ def paint_with_words(
             t,
             encoder_hidden_states={
                 "CONTEXT_TENSOR": cond_embeddings,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // 64}": cross_attention_weight_8,
+                f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": cross_attention_weight_8,
                 f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": cross_attention_weight_16,
                 f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
                 f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
