@@ -115,8 +115,8 @@ def pww_load_tools(
         local_files_only=local_path_only,
     )
 
-    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
-    text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14")
+    tokenizer = CLIPTokenizer.from_pretrained(model_path, subfolder="tokenizer")
+    text_encoder = CLIPTextModel.from_pretrained(model_path, subfolder="text_encoder")
 
     unet = UNet2DConditionModel.from_pretrained(
         model_path,
