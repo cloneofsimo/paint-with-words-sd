@@ -150,7 +150,8 @@ def _image_context_seperator(
         img = img.resize((w, h), resample=PIL.Image.LANCZOS)
 
         for color, v in color_context.items():
-            v, f = v.split(",")
+            f = v.split(",")[-1]
+            v = ",".join(v.split(",")[:-1])
             f = float(f)
             v_input = _tokenizer(
                 v,
