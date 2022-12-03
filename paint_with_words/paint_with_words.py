@@ -11,6 +11,16 @@ from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
 
 
+def preprocess(image):
+    w, h = image.size
+    w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
+    image = image.resize((w, h), resample=PIL.Image.LANCZOS)
+    image = np.array(image).astype(np.float32) / 255.0
+    image = image[None].transpose(0, 3, 1, 2)
+    image = torch.from_numpy(image)
+    return 2.0 * image - 1.0
+
+
 def _img_importance_flatten(img: torch.tensor, ratio: int) -> torch.tensor:
     return F.interpolate(
         img.unsqueeze(0).unsqueeze(1),
@@ -34,8 +44,13 @@ def _pil_from_latents(vae, latents):
 
 def inj_forward(self, hidden_states, context=None, mask=None):
 
+    is_dict_format = True
     if context is not None:
-        context_tensor = context["CONTEXT_TENSOR"]
+        try:
+            context_tensor = context["CONTEXT_TENSOR"]
+        except:
+            context_tensor = context
+            is_dict_format = False
 
     else:
         context_tensor = hidden_states
@@ -57,12 +72,14 @@ def inj_forward(self, hidden_states, context=None, mask=None):
 
     attention_size_of_img = attention_scores.shape[-2]
     if context is not None:
-        f: Callable = context["WEIGHT_FUNCTION"]
-        w = context[f"CROSS_ATTENTION_WEIGHT_{attention_size_of_img}"]
-        sigma = context["SIGMA"]
+        if is_dict_format:
+            f: Callable = context["WEIGHT_FUNCTION"]
+            w = context[f"CROSS_ATTENTION_WEIGHT_{attention_size_of_img}"]
+            sigma = context["SIGMA"]
 
-        cross_attention_weight = f(w, sigma, attention_scores)
-
+            cross_attention_weight = f(w, sigma, attention_scores)
+        else:
+            cross_attention_weight = 0.0
     else:
         cross_attention_weight = 0.0
 
@@ -230,6 +247,8 @@ def paint_with_words(
     preloaded_utils: Optional[Tuple] = None,
     unconditional_input_prompt: str = "",
     model_token: Optional[str] = None,
+    init_image: Optional[Image.Image] = None,
+    strength: float = 0.5,
 ):
 
     vae, unet, text_encoder, tokenizer, scheduler = (
@@ -281,18 +300,42 @@ def paint_with_words(
         return_tensors="pt",
     )
     uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
-
-    latents = torch.randn(
-        (1, unet.in_channels, height // 8, width // 8),
-        generator=generator,
-    )
-    latents = latents.to(device)
-
     scheduler.set_timesteps(num_inference_steps)
+    if init_image is None:
+        timesteps = scheduler.timesteps
 
-    latents = latents * scheduler.init_noise_sigma
+    else:
+        offset = scheduler.config.get("steps_offset", 0)
+        init_timestep = int(num_inference_steps * strength) + offset
+        init_timestep = min(init_timestep, num_inference_steps)
+        t_start = max(num_inference_steps - init_timestep + offset, 0)
+        timesteps = scheduler.timesteps[t_start:]
+        num_inference_steps = num_inference_steps - t_start
+        latent_timestep = timesteps[:1]
 
-    for t in tqdm(scheduler.timesteps):
+    # Latent:
+    if init_image is None:  # txt2img
+        latents = torch.randn(
+            (1, unet.in_channels, height // 8, width // 8),
+            generator=generator,
+        )
+        latents = latents.to(device)
+
+        latents = latents * scheduler.init_noise_sigma
+    else:
+        init_image = preprocess(init_image)
+        image = init_image.to(device=device)
+        init_latent_dist = vae.encode(image).latent_dist
+        init_latents = init_latent_dist.sample()
+        init_latents = 0.18215 * init_latents
+        noise = torch.randn(init_latents.shape).to(device)
+
+        # get latents
+        init_latents = scheduler.add_noise(init_latents, noise, latent_timestep)
+        latents = init_latents
+
+    for t in tqdm(timesteps):
+        # sigma for pww
         step_index = (scheduler.timesteps == t).nonzero().item()
         sigma = scheduler.sigmas[step_index]
 
