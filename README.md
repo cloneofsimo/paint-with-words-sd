@@ -225,27 +225,25 @@ img = paint_with_words(
 
 You can view the minimal working notebook [here](./contents/notebooks/paint_with_words.ipynb) or [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1MZfGaY3aQQn5_T-6bkXFE1rI59A2nJlU?usp=sharing)
 
-* [Painting with words](./contents/notebooks/paint_with_words.ipynb)
+- [Painting with words](./contents/notebooks/paint_with_words.ipynb)
 
-* [Painting with words + Textual Inversion](./contents/notebooks/paint_with_words_textual_inversion.ipynb)
+- [Painting with words + Textual Inversion](./contents/notebooks/paint_with_words_textual_inversion.ipynb)
 
 ---
 
 # TODO
-
-_I'll work on these after school exam is over_
 
 - [ ] Make extensive comparisons for different weight scaling functions.
 - [ ] Create word latent-based cross-attention generations.
 - [ ] Check if statement "making background weight smaller is better" is justifiable, by using some standard metrics
 - [ ] Create AUTOMATIC1111's interface
 - [ ] Create Gradio interface
-- [ ] Create tutorial
+- [x] Create tutorial
 - [ ] See if starting with some "known image latent" is helpful. If it is, we might as well hard-code some initial latent.
 - [ ] Region based seeding, where we set seed for each regions. Can be simply implemented with extra argument in `COLOR_CONTEXT`
 - [ ] sentence wise text seperation. Currently token is the smallest unit that influences cross-attention. This needs to be fixed. (Can be done pretty trivially)
 - [x] Allow different models to be used. use [this](https://github.com/huggingface/diffusers/blob/main/scripts/convert_original_stable_diffusion_to_diffusers.py).
 - [ ] "negative region", where we can set some region to "not" have some semantics. can be done with classifier-free guidance.
-- [ ] Img2ImgPaintWithWords -> Img2Img, but with extra text segmentation map for better control
+- [x] Img2ImgPaintWithWords -> Img2Img, but with extra text segmentation map for better control
 - [ ] InpaintPaintwithWords -> inpaint, but with extra text segmentation map for better control
-- [ ] Support for other schedulers
+- [x] Support for other schedulers
