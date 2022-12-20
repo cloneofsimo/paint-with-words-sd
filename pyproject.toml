@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "paint-with-words-pipeline"
+version = "0.1.0"
+description = ""
+authors = ["Simo Ryu <cloneofsimo@gmail.com>", "Shunsuke KITADA <shunsuke.kitada.0831@gmail.com>"]
+readme = "README.md"
+packages = [{include = "paint_with_words"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+diffusers = "^0.10.2"
+transformers = "^4.25.1"
+torch = "^1.12.1"
+torchvision = "^0.13.1"
+accelerate = "^0.15.0"
+scipy = "^1.9.3"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.12.0"
+isort = "^5.11.2"
+flake8 = "^6.0.0"
+mypy = "^0.991"
+pytest = "^7.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
