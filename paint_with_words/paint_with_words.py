@@ -94,37 +94,6 @@ def pww_load_tools(
     return vae, unet, text_encoder, tokenizer, scheduler
 
 
-def _tokens_img_attention_weight(
-    img_context_seperated, tokenized_texts, ratio: int = 8
-):
-
-    token_lis = tokenized_texts["input_ids"][0].tolist()
-    w, h = img_context_seperated[0][1].shape
-
-    w_r, h_r = w // ratio, h // ratio
-
-    ret_tensor = torch.zeros((w_r * h_r, len(token_lis)), dtype=torch.float32)
-
-    for v_as_tokens, img_where_color in img_context_seperated:
-        is_in = 0
-
-        for idx, tok in enumerate(token_lis):
-            if token_lis[idx : idx + len(v_as_tokens)] == v_as_tokens:
-                is_in = 1
-
-                # print(token_lis[idx : idx + len(v_as_tokens)], v_as_tokens)
-                ret_tensor[:, idx : idx + len(v_as_tokens)] += (
-                    _img_importance_flatten(img_where_color, ratio)
-                    .reshape(-1, 1)
-                    .repeat(1, len(v_as_tokens))
-                )
-
-        if not is_in == 1:
-            print(f"Warning ratio {ratio} : tokens {v_as_tokens} not found in text")
-
-    return ret_tensor
-
-
 @torch.no_grad()
 @torch.autocast("cuda")
 def paint_with_words(
