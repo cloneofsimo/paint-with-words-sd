@@ -21,15 +21,6 @@ def preprocess(image):
     return 2.0 * image - 1.0
 
 
-def _img_importance_flatten(img: torch.tensor, ratio: int) -> torch.tensor:
-    return F.interpolate(
-        img.unsqueeze(0).unsqueeze(1),
-        scale_factor=1 / ratio,
-        mode="bilinear",
-        align_corners=True,
-    ).squeeze()
-
-
 def _pil_from_latents(vae, latents):
     _latents = 1 / 0.18215 * latents.clone()
     image = vae.decode(_latents).sample
