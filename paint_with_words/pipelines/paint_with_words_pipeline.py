@@ -55,6 +55,13 @@ class PaintWithWordsPipeline(StableDiffusionPipeline):
             requires_safety_checker,
         )
 
+    def replace_cross_attention(
+        self, cross_attention_name: str = "CrossAttention"
+    ) -> None:
+        for _module in unet.modules():
+            if _module.__class__.__name__ == "CrossAttention":
+                _module.__class__.__call__ = inj_forward
+
     def _image_context_seperator(
         img: Image.Image, color_context: dict, _tokenizer
     ) -> List[Tuple[List[int], torch.Tensor]]:

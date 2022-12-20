@@ -84,10 +84,6 @@ def pww_load_tools(
 
     vae.to(device), unet.to(device), text_encoder.to(device)
 
-    for _module in unet.modules():
-        if _module.__class__.__name__ == "CrossAttention":
-            _module.__class__.__call__ = inj_forward
-
     scheduler = scheduler_type(
         beta_start=0.00085,
         beta_end=0.012,
