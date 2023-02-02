@@ -230,6 +230,27 @@ def _tokens_img_attention_weight(
     return ret_tensor
 
 
+def _extract_seed_from_context(color_context, default_seed: int=0):
+    # Split seed from color_context if provided
+    seeds = []
+    number_extra_seed = 0
+    for k, _context in color_context.items():
+        _context_split = _context.split(',')
+        if len(_context_split) > 2:
+            seed = _context_split[-1]
+            _context_split = _context_split[:-1]
+            number_extra_seed += 1
+        else:
+            seed = default_seed
+        color_context[k] = ','.join(_context_split)
+        seeds.append(seed)
+    if number_extra_seed == 0:
+        generator = torch.manual_seed(default_seed)
+    else:
+        generator = [torch.manual_seed(seed) for seed in seeds]
+    return color_context, generator
+
+
 @torch.no_grad()
 @torch.autocast("cuda")
 def paint_with_words(
@@ -266,7 +287,8 @@ def paint_with_words(
         else preloaded_utils
     )
 
-    generator = torch.manual_seed(seed)
+    color_context, generator = _extract_seed_from_context(color_context, default_seed=seed)
+    is_multi_seed = isinstance(generator, list)
 
     text_input = tokenizer(
         [input_prompt],
@@ -275,7 +297,7 @@ def paint_with_words(
         truncation=True,
         return_tensors="pt",
     )
-
+    
     seperated_word_contexts, width, height = _image_context_seperator(
         color_map_image, color_context, tokenizer
     )
@@ -318,12 +340,20 @@ def paint_with_words(
 
     # Latent:
     if init_image is None:  # txt2img
-        latents = torch.randn(
-            (1, unet.in_channels, height // 8, width // 8),
-            generator=generator,
-        )
+        if is_multi_seed:
+            latents = [torch.randn(
+                (1, unet.in_channels, height // 8, width // 8),
+                generator=gen,) for gen in generator]
+            img_where_color_mask = [(contexts[1] > 0).type(latents[0].dtype) 
+                            for contexts in seperated_word_contexts]
+            latents = sum(_latents * F.interpolate(_mask[None,None], size=_latents.shape[2:], mode='nearest') 
+                            for _latents, _mask in zip(latents, img_where_color_mask))
+        else:
+            latents = torch.randn(
+                (1, unet.in_channels, height // 8, width // 8),
+                generator=generator,
+            )
         latents = latents.to(device)
-
         latents = latents * scheduler.init_noise_sigma
     else:
         init_image = preprocess(init_image)
