@@ -117,6 +117,8 @@ def pww_load_tools(
         local_model_path or hf_model_path
     ), "either local_model_path or hf_model_path must be provided"
 
+    is_mps = device == 'mps'
+    dtype = torch.float16 if not is_mps else torch.float32
     model_path = local_model_path if local_model_path is not None else hf_model_path
     local_path_only = local_model_path is not None
     print(model_path)
@@ -124,7 +126,7 @@ def pww_load_tools(
         model_path,
         subfolder="vae",
         use_auth_token=model_token,
-        torch_dtype=torch.float16,
+        torch_dtype=dtype,
         local_files_only=local_path_only,
     )
 
@@ -135,7 +137,7 @@ def pww_load_tools(
         model_path,
         subfolder="unet",
         use_auth_token=model_token,
-        torch_dtype=torch.float16,
+        torch_dtype=dtype,
         local_files_only=local_path_only,
     )
 
@@ -144,6 +146,7 @@ def pww_load_tools(
     for _module in unet.modules():
         if _module.__class__.__name__ == "CrossAttention":
             _module.__class__.__call__ = inj_forward
+            # _module.set_processor(eDiff_CrossAttnProcessor())
 
     scheduler = scheduler_type(
         beta_start=0.00085,
@@ -333,17 +336,19 @@ def paint_with_words(
         # get latents
         init_latents = scheduler.add_noise(init_latents, noise, latent_timestep)
         latents = init_latents
-
+    
+    is_mps = device == "mps"
     for t in tqdm(timesteps):
         # sigma for pww
         step_index = (scheduler.timesteps == t).nonzero().item()
         sigma = scheduler.sigmas[step_index]
 
         latent_model_input = scheduler.scale_model_input(latents, t)
-
+        
+        _t = t if not is_mps else t.float()
         noise_pred_text = unet(
             latent_model_input,
-            t,
+            _t,
             encoder_hidden_states={
                 "CONTEXT_TENSOR": cond_embeddings,
                 f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": cross_attention_weight_8,
@@ -359,7 +364,7 @@ def paint_with_words(
 
         noise_pred_uncond = unet(
             latent_model_input,
-            t,
+            _t,
             encoder_hidden_states={
                 "CONTEXT_TENSOR": uncond_embeddings,
                 "CROSS_ATTENTION_WEIGHT_4096": 0,
