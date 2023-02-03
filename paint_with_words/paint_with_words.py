@@ -9,6 +9,7 @@ from diffusers import AutoencoderKL, LMSDiscreteScheduler, UNet2DConditionModel
 from PIL import Image
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
+import torchvision.transforms as T
 
 
 def preprocess(image):
@@ -199,19 +200,23 @@ def _image_context_seperator(
 
 
 def _tokens_img_attention_weight(
-    img_context_seperated, tokenized_texts, ratio: int = 8
+    img_context_seperated, tokenized_texts, ratio: int = 8, blur_img = False
 ):
-
+    
     token_lis = tokenized_texts["input_ids"][0].tolist()
     w, h = img_context_seperated[0][1].shape
 
     w_r, h_r = w // ratio, h // ratio
 
     ret_tensor = torch.zeros((w_r * h_r, len(token_lis)), dtype=torch.float32)
+    
+    sigma = np.log(float(ratio)) / np.log(2.)
+    blurrer = T.GaussianBlur(kernel_size=(19, 19), sigma=(sigma, sigma))
 
     for v_as_tokens, img_where_color in img_context_seperated:
         is_in = 0
-
+        if blur_img:
+             img_where_color = blurrer(img_where_color[None,None])[0,0]
         for idx, tok in enumerate(token_lis):
             if token_lis[idx : idx + len(v_as_tokens)] == v_as_tokens:
                 is_in = 1
@@ -241,6 +246,13 @@ def _extract_seed_from_context(color_context, default_seed: int=0):
                 extra_seeds[i] = seed
         color_context[k] = ','.join(_context_split)
     return color_context, extra_seeds
+
+
+def _get_binary_mask(seperated_word_contexts, extra_seeds, dtype, size):
+    img_where_color_mask = [(seperated_word_contexts[k][1] > 0).type(dtype) for k in extra_seeds.keys()]
+    img_where_color_mask = [F.interpolate(mask.unsqueeze(0).unsqueeze(1), 
+        size=size, mode='bilinear') for mask in img_where_color_mask]
+    return img_where_color_mask
 
 
 @torch.no_grad()
@@ -332,19 +344,13 @@ def paint_with_words(
 
     # Latent:
     if init_image is None:  # txt2img
-        latents = torch.randn(
-            (1, unet.in_channels, height // 8, width // 8),
-            generator=torch.manual_seed(seed))
+        latent_size = (1, unet.in_channels, height // 8, width // 8)
+        latents = torch.randn(latent_size, generator=torch.manual_seed(seed))
         if is_multi_seed:
             print('Use region based seeding: ', extra_seeds)
-            multi_latents = [torch.randn(
-                (1, unet.in_channels, height // 8, width // 8),
+            multi_latents = [torch.randn(latent_size,
                 generator=torch.manual_seed(_seed)) for _seed in extra_seeds.values()]
-            dtype = latents[0].dtype
-            # get mask of random seeds
-            img_where_color_mask = [(seperated_word_contexts[k][1] > 0).type(dtype) for k in extra_seeds.keys()]
-            img_where_color_mask = [F.interpolate(mask.unsqueeze(0).unsqueeze(1), 
-                size=(height // 8, width // 8), mode='bilinear') for mask in img_where_color_mask]
+            img_where_color_mask = _get_binary_mask(seperated_word_contexts, extra_seeds, dtype=latents[0].dtype, size=latent_size[-2:])
             foreground = (sum(img_where_color_mask) > 0).squeeze()
             # sum seeds weighted by masks
             summed_multi_latents = sum(_latents * _mask for _latents, _mask in zip(multi_latents, img_where_color_mask))
