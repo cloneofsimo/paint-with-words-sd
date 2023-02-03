@@ -146,7 +146,6 @@ def pww_load_tools(
     for _module in unet.modules():
         if _module.__class__.__name__ == "CrossAttention":
             _module.__class__.__call__ = inj_forward
-            # _module.set_processor(eDiff_CrossAttnProcessor())
 
     scheduler = scheduler_type(
         beta_start=0.00085,
@@ -232,23 +231,16 @@ def _tokens_img_attention_weight(
 
 def _extract_seed_from_context(color_context, default_seed: int=0):
     # Split seed from color_context if provided
-    seeds = []
-    number_extra_seed = 0
-    for k, _context in color_context.items():
+    extra_seeds = {}
+    for i, (k, _context) in enumerate(color_context.items()):
         _context_split = _context.split(',')
         if len(_context_split) > 2:
-            seed = _context_split[-1]
+            seed = int(_context_split[-1])
             _context_split = _context_split[:-1]
-            number_extra_seed += 1
-        else:
-            seed = default_seed
+            if seed != default_seed:
+                extra_seeds[i] = seed
         color_context[k] = ','.join(_context_split)
-        seeds.append(seed)
-    if number_extra_seed == 0:
-        generator = torch.manual_seed(default_seed)
-    else:
-        generator = [torch.manual_seed(seed) for seed in seeds]
-    return color_context, generator
+    return color_context, extra_seeds
 
 
 @torch.no_grad()
@@ -287,8 +279,8 @@ def paint_with_words(
         else preloaded_utils
     )
 
-    color_context, generator = _extract_seed_from_context(color_context, default_seed=seed)
-    is_multi_seed = isinstance(generator, list)
+    color_context, extra_seeds = _extract_seed_from_context(color_context, default_seed=seed)
+    is_multi_seed = len(extra_seeds) > 0
 
     text_input = tokenizer(
         [input_prompt],
@@ -340,19 +332,23 @@ def paint_with_words(
 
     # Latent:
     if init_image is None:  # txt2img
+        latents = torch.randn(
+            (1, unet.in_channels, height // 8, width // 8),
+            generator=torch.manual_seed(seed))
         if is_multi_seed:
-            latents = [torch.randn(
+            print('Use region based seeding: ', extra_seeds)
+            multi_latents = [torch.randn(
                 (1, unet.in_channels, height // 8, width // 8),
-                generator=gen,) for gen in generator]
-            img_where_color_mask = [(contexts[1] > 0).type(latents[0].dtype) 
-                            for contexts in seperated_word_contexts]
-            latents = sum(_latents * F.interpolate(_mask[None,None], size=_latents.shape[2:], mode='nearest') 
-                            for _latents, _mask in zip(latents, img_where_color_mask))
-        else:
-            latents = torch.randn(
-                (1, unet.in_channels, height // 8, width // 8),
-                generator=generator,
-            )
+                generator=torch.manual_seed(_seed)) for _seed in extra_seeds.values()]
+            dtype = latents[0].dtype
+            # get mask of random seeds
+            img_where_color_mask = [(seperated_word_contexts[k][1] > 0).type(dtype) for k in extra_seeds.keys()]
+            img_where_color_mask = [F.interpolate(mask.unsqueeze(0).unsqueeze(1), 
+                size=(height // 8, width // 8), mode='bilinear') for mask in img_where_color_mask]
+            foreground = (sum(img_where_color_mask) > 0).squeeze()
+            # sum seeds weighted by masks
+            summed_multi_latents = sum(_latents * _mask for _latents, _mask in zip(multi_latents, img_where_color_mask))
+            latents[:,:,foreground] = summed_multi_latents[:,:,foreground]
         latents = latents.to(device)
         latents = latents * scheduler.init_noise_sigma
     else:

@@ -31,14 +31,13 @@ EXAMPLE_SETTING_2 = {
     "output_img_path": "contents/output_dog_cat.png",
 }
 
-
 EXAMPLE_SETTING_3 = {
     "color_context": {
-        (7, 9, 182): "aurora,0.5,42",
-        (136, 178, 92): "full moon,1.5,55",
-        (51, 193, 217): "mountains,0.4,39",
-        (61, 163, 35): "a half-frozen lake,0.3,77",
-        (89, 102, 255): "boat,2.0,889",
+        (7, 9, 182): "aurora,0.5",
+        (136, 178, 92): "full moon,1.5",
+        (51, 193, 217): "mountains,0.4",
+        (61, 163, 35): "a half-frozen lake,0.3",
+        (89, 102, 255): "boat,2.0",
     },
     "color_map_img_path": "contents/aurora_2.png",
     "input_prompt": "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed.",
@@ -58,11 +57,24 @@ EXAMPLE_SETTING_4 = {
     "output_img_path": "contents/aurora_1_output.png",
 }
 
+EXAMPLE_SETTING_4_seed = {
+    "color_context": {
+        (7, 9, 182): "aurora,0.5",
+        (136, 178, 92): "full moon,1.5",
+        (51, 193, 217): "mountains,0.4",
+        (61, 163, 35): "a half-frozen lake,0.3",
+        (89, 102, 255): "boat,2.0",
+    },
+    "color_map_img_path": "contents/aurora_1.png",
+    "input_prompt": "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed.",
+    "output_img_path": "contents/aurora_1_seed_output.png",
+}
+
 if __name__ == "__main__":
 
     dotenv.load_dotenv()
 
-    settings = EXAMPLE_SETTING_3
+    settings = EXAMPLE_SETTING_4_seed
 
     color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB")
     color_context = settings["color_context"]
