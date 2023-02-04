@@ -200,7 +200,7 @@ def _image_context_seperator(
 
 
 def _tokens_img_attention_weight(
-    img_context_seperated, tokenized_texts, ratio: int = 8, blur_img = False
+    img_context_seperated, tokenized_texts, ratio: int = 8
 ):
     
     token_lis = tokenized_texts["input_ids"][0].tolist()
@@ -210,13 +210,8 @@ def _tokens_img_attention_weight(
 
     ret_tensor = torch.zeros((w_r * h_r, len(token_lis)), dtype=torch.float32)
     
-    sigma = np.log(float(ratio)) / np.log(2.)
-    blurrer = T.GaussianBlur(kernel_size=(19, 19), sigma=(sigma, sigma))
-
     for v_as_tokens, img_where_color in img_context_seperated:
         is_in = 0
-        if blur_img:
-             img_where_color = blurrer(img_where_color[None,None])[0,0]
         for idx, tok in enumerate(token_lis):
             if token_lis[idx : idx + len(v_as_tokens)] == v_as_tokens:
                 is_in = 1
@@ -234,18 +229,25 @@ def _tokens_img_attention_weight(
     return ret_tensor
 
 
-def _extract_seed_from_context(color_context, default_seed: int=0):
-    # Split seed from color_context if provided
+def _extract_seed_and_sigma_from_context(color_context, ignore_seed = -1):
+    # Split seed and sigma from color_context if provided
     extra_seeds = {}
+    extra_sigmas = {}
     for i, (k, _context) in enumerate(color_context.items()):
         _context_split = _context.split(',')
         if len(_context_split) > 2:
-            seed = int(_context_split[-1])
-            _context_split = _context_split[:-1]
-            if seed != default_seed:
+            try:
+                seed = int(_context_split[-2])
+                sigma = float(_context_split[-1])
+                _context_split = _context_split[:-2]
+                extra_sigmas[i] = sigma
+            except ValueError:
+                seed = int(_context_split[-1])
+                _context_split = _context_split[:-1]
+            if seed != ignore_seed:
                 extra_seeds[i] = seed
         color_context[k] = ','.join(_context_split)
-    return color_context, extra_seeds
+    return color_context, extra_seeds, extra_sigmas
 
 
 def _get_binary_mask(seperated_word_contexts, extra_seeds, dtype, size):
@@ -253,6 +255,14 @@ def _get_binary_mask(seperated_word_contexts, extra_seeds, dtype, size):
     img_where_color_mask = [F.interpolate(mask.unsqueeze(0).unsqueeze(1), 
         size=size, mode='bilinear') for mask in img_where_color_mask]
     return img_where_color_mask
+
+
+def _blur_image_mask(seperated_word_contexts, extra_sigmas):
+    for k, sigma in extra_sigmas.items():
+        blurrer = T.GaussianBlur(kernel_size=(39, 39), sigma=(sigma, sigma))
+        v_as_tokens, img_where_color = seperated_word_contexts[k]
+        seperated_word_contexts[k] = (v_as_tokens, blurrer(img_where_color[None,None])[0,0])
+    return seperated_word_contexts
 
 
 @torch.no_grad()
@@ -291,9 +301,6 @@ def paint_with_words(
         else preloaded_utils
     )
 
-    color_context, extra_seeds = _extract_seed_from_context(color_context, default_seed=seed)
-    is_multi_seed = len(extra_seeds) > 0
-
     text_input = tokenizer(
         [input_prompt],
         padding="max_length",
@@ -302,9 +309,14 @@ def paint_with_words(
         return_tensors="pt",
     )
     
+    color_context, extra_seeds, extra_sigmas = _extract_seed_and_sigma_from_context(color_context)
+    is_extra_seed, is_extra_sigma = len(extra_seeds) > 0, len(extra_sigmas) > 0
     seperated_word_contexts, width, height = _image_context_seperator(
         color_map_image, color_context, tokenizer
     )
+    if is_extra_sigma:
+        print('Use extra sigma to smooth mask', extra_sigmas)
+        seperated_word_contexts = _blur_image_mask(seperated_word_contexts, extra_sigmas)
 
     cross_attention_weight_8 = _tokens_img_attention_weight(
         seperated_word_contexts, text_input, ratio=8
@@ -346,7 +358,7 @@ def paint_with_words(
     if init_image is None:  # txt2img
         latent_size = (1, unet.in_channels, height // 8, width // 8)
         latents = torch.randn(latent_size, generator=torch.manual_seed(seed))
-        if is_multi_seed:
+        if is_extra_seed:
             print('Use region based seeding: ', extra_seeds)
             multi_latents = [torch.randn(latent_size,
                 generator=torch.manual_seed(_seed)) for _seed in extra_seeds.values()]
