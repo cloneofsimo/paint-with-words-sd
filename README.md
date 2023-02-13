@@ -189,6 +189,47 @@ img = paint_with_words(
 
 > $w' = w \log (1 + \sigma^2)  std (Q^T K)$
 
+# Regional-based seeding
+
+Following this example, where the random seed for whole image is 0,
+<!-- #region -->
+<p align="center">
+<img  src="contents/aurora_1_merged.jpg">
+</p>
+<!-- #endregion -->
+
+> "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed."
+
+the random seed for 'boat', 'moon', and 'mountain' are set to various values show in the top row.
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/cmp_regional_based_seeing.png">
+</p>
+<!-- #endregion -->
+
+Example:
+
+```python
+
+EXAMPLE_SETTING_4_seed = {
+    "color_context": {
+        (7, 9, 182): "aurora,0.5,-1",
+        (136, 178, 92): "full moon,1.5,-1",
+        (51, 193, 217): "mountains,0.4,-1",
+        (61, 163, 35): "a half-frozen lake,0.3,-1",
+        (89, 102, 255): "boat,2.0,2077",
+    },
+    "color_map_img_path": "contents/aurora_1.png",
+    "input_prompt": "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed.",
+    "output_img_path": "contents/aurora_1_seed_output.png",
+}
+```
+where the 3rd item of context are random seed for the object. Use -1 to follow the seed set in paint_with_words function. In this example the random seed of boat is set to 2077.
+
+
+
+
 # Using other Fine-tuned models
 
 If you are from Automatic1111 community, you maybe used to using native LDM checkpoint formats, not diffuser-checkpoint format. Luckily, there is a quick script that allows conversion.
@@ -240,7 +281,7 @@ You can view the minimal working notebook [here](./contents/notebooks/paint_with
 - [ ] Create Gradio interface
 - [x] Create tutorial
 - [ ] See if starting with some "known image latent" is helpful. If it is, we might as well hard-code some initial latent.
-- [ ] Region based seeding, where we set seed for each regions. Can be simply implemented with extra argument in `COLOR_CONTEXT`
+- [x] Region based seeding, where we set seed for each regions. Can be simply implemented with extra argument in `COLOR_CONTEXT`
 - [ ] sentence wise text seperation. Currently token is the smallest unit that influences cross-attention. This needs to be fixed. (Can be done pretty trivially)
 - [x] Allow different models to be used. use [this](https://github.com/huggingface/diffusers/blob/main/scripts/convert_original_stable_diffusion_to_diffusers.py).
 - [ ] "negative region", where we can set some region to "not" have some semantics. can be done with classifier-free guidance.
