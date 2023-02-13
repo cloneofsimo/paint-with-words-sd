@@ -57,17 +57,16 @@ EXAMPLE_SETTING_4 = {
     "output_img_path": "contents/aurora_1_output.png",
 }
 
-obj = "full moon"
 EXAMPLE_SETTING_4_seed = {
     "color_context": {
         (7, 9, 182): "aurora,0.5,-1",
-        (136, 178, 92): "%s,1.5,-1"%obj,
+        (136, 178, 92): "full moon,1.5,-1",
         (51, 193, 217): "mountains,0.4,-1",
         (61, 163, 35): "a half-frozen lake,0.3,-1",
-        (89, 102, 255): "boat,2.0,-1",
+        (89, 102, 255): "boat,2.0,2077",
     },
     "color_map_img_path": "contents/aurora_1.png",
-    "input_prompt": "A digital painting of a half-frozen lake near mountains under a %s and aurora. A boat is in the middle of the lake. Highly detailed."%obj,
+    "input_prompt": "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed.",
     "output_img_path": "contents/aurora_1_seed_output.png",
 }
 
