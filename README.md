@@ -228,8 +228,6 @@ EXAMPLE_SETTING_4_seed = {
 where the 3rd item of context are random seed for the object. Use -1 to follow the seed set in paint_with_words function. In this example the random seed of boat is set to 2077.
 
 
-
-
 # Using other Fine-tuned models
 
 If you are from Automatic1111 community, you maybe used to using native LDM checkpoint formats, not diffuser-checkpoint format. Luckily, there is a quick script that allows conversion.
@@ -271,6 +269,23 @@ You can view the minimal working notebook [here](./contents/notebooks/paint_with
 - [Painting with words + Textual Inversion](./contents/notebooks/paint_with_words_textual_inversion.ipynb)
 
 ---
+
+# Gradio interface
+To launch gradio api
+```bash
+python gradio_pww.py
+```
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/gradio_demo.png">
+</p>
+<!-- #endregion -->
+
+Noting that the "Color context" should follows the format defined as the example in runner.py. 
+For example, 
+> "{(7, 9, 182): "aurora,0.5,-1",(136, 178, 92): "full moon,1.5,-1",(51, 193, 217): "mountains,0.4,-1",(61, 163, 35): "a half-frozen lake,0.3,-1",(89, 102, 255): "boat,2.0,2077",}"
+
 
 # TODO
 
