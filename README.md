@@ -284,7 +284,7 @@ python gradio_pww.py
 
 Noting that the "Color context" should follows the format defined as the example in runner.py. 
 For example, 
-> "{(7, 9, 182): "aurora,0.5,-1",(136, 178, 92): "full moon,1.5,-1",(51, 193, 217): "mountains,0.4,-1",(61, 163, 35): "a half-frozen lake,0.3,-1",(89, 102, 255): "boat,2.0,2077",}"
+> {(7, 9, 182): "aurora,0.5,-1",(136, 178, 92): "full moon,1.5,-1",(51, 193, 217): "mountains,0.4,-1",(61, 163, 35): "a half-frozen lake,0.3,-1",(89, 102, 255): "boat,2.0,2077",}
 
 
 # TODO
@@ -293,7 +293,7 @@ For example,
 - [ ] Create word latent-based cross-attention generations.
 - [ ] Check if statement "making background weight smaller is better" is justifiable, by using some standard metrics
 - [ ] Create AUTOMATIC1111's interface
-- [ ] Create Gradio interface
+- [x] Create Gradio interface
 - [x] Create tutorial
 - [ ] See if starting with some "known image latent" is helpful. If it is, we might as well hard-code some initial latent.
 - [x] Region based seeding, where we set seed for each regions. Can be simply implemented with extra argument in `COLOR_CONTEXT`
