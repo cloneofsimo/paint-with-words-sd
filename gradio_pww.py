@@ -12,11 +12,13 @@ from paint_with_words import paint_with_words
 dotenv.load_dotenv()
 
 
-def run_pww(input_image, color_context, input_prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta):
+def run_pww(input_image, color_context, input_prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device):
     
     color_map_image = Image.fromarray(input_image['image'])
     color_context = ast.literal_eval(color_context)
-    
+    if device == 'cuda':
+        device += ':0'
+
     gen_seed = [seed]
     if num_samples > 1:
         gen = torch.Generator()
@@ -32,7 +34,7 @@ def run_pww(input_image, color_context, input_prompt, a_prompt, n_prompt, num_sa
             unconditional_input_prompt=n_prompt,
             num_inference_steps=ddim_steps,
             guidance_scale=scale,
-            device="cuda:0",
+            device=device,
             seed=_seed,
             weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
             strength=eta
@@ -51,7 +53,8 @@ with block:
             input_image = gr.Image(source='upload', type='numpy', tool='sketch')
             prompt = gr.Textbox(label="Prompt")
             color_context = gr.Textbox(label="Color context", value='')
-            run_button = gr.Button(label="Run")               
+            device = gr.inputs.Dropdown(label='Device', default='cuda', choices=['cuda', 'mps'])
+            run_button = gr.Button(label="Run")
             with gr.Accordion("Advanced options", open=False):
                 num_samples = gr.Slider(label="Images", minimum=1, maximum=12, value=1, step=1)
                 ddim_steps = gr.Slider(label="Steps", minimum=1, maximum=100, value=30, step=1)
@@ -63,7 +66,7 @@ with block:
                 n_prompt = gr.Textbox(label="Negative Prompt", value='')
         with gr.Column():
             result_gallery = gr.Gallery(label='Output', show_label=False, elem_id="gallery").style(grid=2, height='auto')
-    ips = [input_image, color_context, prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta]
+    ips = [input_image, color_context, prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device]
     run_button.click(fn=run_pww, inputs=ips, outputs=[result_gallery])
 
 
