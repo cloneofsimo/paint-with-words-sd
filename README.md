@@ -303,3 +303,6 @@ For example,
 - [x] Img2ImgPaintWithWords -> Img2Img, but with extra text segmentation map for better control
 - [ ] InpaintPaintwithWords -> inpaint, but with extra text segmentation map for better control
 - [x] Support for other schedulers
+
+# Achknoldegement
+Thanks for the inpiring gradio interface from [ControlNet](https://github.com/lllyasviel/ControlNet)
