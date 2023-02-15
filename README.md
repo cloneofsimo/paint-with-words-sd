@@ -304,5 +304,5 @@ For example,
 - [ ] InpaintPaintwithWords -> inpaint, but with extra text segmentation map for better control
 - [x] Support for other schedulers
 
-# Achknoldegement
+# Acknowledgement
 Thanks for the inpiring gradio interface from [ControlNet](https://github.com/lllyasviel/ControlNet)
