@@ -1,7 +1,6 @@
 from PIL import Image
 import math
 import torch
-from random import randint
 import ast
 import gradio as gr
 import dotenv
@@ -11,10 +10,15 @@ from paint_with_words import paint_with_words
 
 dotenv.load_dotenv()
 
+IMG_HEIGHT=512
+IMG_WIDTH=512
 
-def run_pww(input_image, color_context, input_prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device):
+
+def run_pww(color_map_image, init_image, color_context, input_prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device):
     
-    color_map_image = Image.fromarray(input_image['image'])
+    color_map_image = color_map_image.resize((IMG_WIDTH,IMG_HEIGHT), Image.Resampling.BILINEAR)
+    if init_image is not None:
+        init_image = init_image.resize((IMG_WIDTH,IMG_HEIGHT), Image.Resampling.BILINEAR)
     color_context = ast.literal_eval(color_context)
     if device == 'cuda':
         device += ':0'
@@ -30,6 +34,7 @@ def run_pww(input_image, color_context, input_prompt, a_prompt, n_prompt, num_sa
         img = paint_with_words(
             color_context=color_context,
             color_map_image=color_map_image,
+            init_image=init_image,
             input_prompt='%s,%s'%(input_prompt,a_prompt),
             unconditional_input_prompt=n_prompt,
             num_inference_steps=ddim_steps,
@@ -50,7 +55,8 @@ with block:
         gr.Markdown("## Paint-with-word")
     with gr.Row():
         with gr.Column():
-            input_image = gr.Image(source='upload', type='numpy', tool='sketch')
+            color_map_image = gr.Image(label='Segmentation map', source='upload', type='pil', tool='color-sketch')
+            init_image = gr.Image(label='Initial image', source='upload', type='pil')
             prompt = gr.Textbox(label="Prompt")
             color_context = gr.Textbox(label="Color context", value='')
             device = gr.inputs.Dropdown(label='Device', default='cuda', choices=['cuda', 'mps'])
@@ -66,7 +72,7 @@ with block:
                 n_prompt = gr.Textbox(label="Negative Prompt", value='')
         with gr.Column():
             result_gallery = gr.Gallery(label='Output', show_label=False, elem_id="gallery").style(grid=2, height='auto')
-    ips = [input_image, color_context, prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device]
+    ips = [color_map_image, init_image, color_context, prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device]
     run_button.click(fn=run_pww, inputs=ips, outputs=[result_gallery])
 
 
