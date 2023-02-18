@@ -3,7 +3,8 @@ import math
 import dotenv
 from PIL import Image
 
-from paint_with_words import paint_with_words
+from paint_with_words import paint_with_words, paint_with_words_inpaint
+
 
 EXAMPLE_SETTING_1 = {
     "color_context": {
@@ -80,9 +81,24 @@ if __name__ == "__main__":
     color_context = settings["color_context"]
     input_prompt = settings["input_prompt"]
 
-    img = paint_with_words(
+    init_image = Image.open('./contents/inpaint_examples/image1.png').convert("RGB")
+    mask_image = Image.open('./contents/inpaint_examples/mask1.png').convert("RGB")
+    
+    # img = paint_with_words(
+    #     color_context=color_context,
+    #     color_map_image=color_map_image,
+    #     input_prompt=input_prompt,
+    #     num_inference_steps=30,
+    #     guidance_scale=7.5,
+    #     device="cuda:0",
+    #     weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
+    # )
+    
+    img = paint_with_words_inpaint(
         color_context=color_context,
         color_map_image=color_map_image,
+        init_image=init_image,
+        mask_image=mask_image,
         input_prompt=input_prompt,
         num_inference_steps=30,
         guidance_scale=7.5,
