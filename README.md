@@ -305,4 +305,4 @@ For example,
 - [x] Support for other schedulers
 
 # Acknowledgement
-Thanks for the inpiring gradio interface from [ControlNet](https://github.com/lllyasviel/ControlNet)
+Thanks for the inspiring gradio interface from [ControlNet](https://github.com/lllyasviel/ControlNet)
