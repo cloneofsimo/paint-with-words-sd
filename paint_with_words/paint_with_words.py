@@ -328,37 +328,6 @@ def _encode_text_color_inputs(
     return extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_embeddings
 
 
-def get_latents(vae, seperated_word_contexts, 
-                init_image, latent_timestep, latent_size, seed, device, scheduler, 
-                is_extra_seed=False, extra_seeds=None):
-    if init_image is None:  # txt2img
-        latents = torch.randn(latent_size, generator=torch.manual_seed(seed))
-        if is_extra_seed:
-            print('Use region based seeding: ', extra_seeds)
-            multi_latents = [torch.randn(latent_size,
-                generator=torch.manual_seed(_seed)) for _seed in extra_seeds.values()]
-            img_where_color_mask = _get_binary_mask(seperated_word_contexts, extra_seeds, dtype=latents[0].dtype, size=latent_size[-2:])
-            foreground = (sum(img_where_color_mask) > 0).squeeze()
-            # sum seeds weighted by masks
-            summed_multi_latents = sum(_latents * _mask for _latents, _mask in zip(multi_latents, img_where_color_mask))
-            latents[:,:,foreground] = summed_multi_latents[:,:,foreground]
-        latents = latents.to(device)
-        latents = latents * scheduler.init_noise_sigma
-    else:
-        init_image = preprocess(init_image)
-        image = init_image.to(device=device)
-        init_latent_dist = vae.encode(image).latent_dist
-        init_latents = init_latent_dist.sample()
-        init_latents = 0.18215 * init_latents
-        noise = torch.randn(init_latents.shape).to(device)
-
-        # get latents
-        init_latents = scheduler.add_noise(init_latents, noise, latent_timestep)
-        latents = init_latents
-    
-    return latents
-
-
 @torch.no_grad()
 @torch.autocast("cuda")
 def paint_with_words(
