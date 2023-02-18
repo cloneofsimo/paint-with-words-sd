@@ -1,5 +1,5 @@
 import math
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple,Union
 
 import numpy as np
 import PIL
@@ -265,6 +265,100 @@ def _blur_image_mask(seperated_word_contexts, extra_sigmas):
     return seperated_word_contexts
 
 
+def _encode_text_color_inputs(
+        text_encoder, tokenizer, device, 
+        color_map_image, color_context, 
+        input_prompt, unconditional_input_prompt):
+    # Process input prompt text
+    text_input = tokenizer(
+        [input_prompt],
+        padding="max_length",
+        max_length=tokenizer.model_max_length,
+        truncation=True,
+        return_tensors="pt",
+    )
+    
+    # Extract seed and sigma from color context
+    color_context, extra_seeds, extra_sigmas = _extract_seed_and_sigma_from_context(color_context)
+    is_extra_sigma = len(extra_sigmas) > 0
+    
+    # Process color map image and context
+    seperated_word_contexts, width, height = _image_context_seperator(
+        color_map_image, color_context, tokenizer
+    )
+    
+    # Smooth mask with extra sigma if applicable
+    if is_extra_sigma:
+        print('Use extra sigma to smooth mask', extra_sigmas)
+        seperated_word_contexts = _blur_image_mask(seperated_word_contexts, extra_sigmas)
+    
+    # Compute cross-attention weights
+    cross_attention_weight_8 = _tokens_img_attention_weight(
+        seperated_word_contexts, text_input, ratio=8
+    ).to(device)
+    cross_attention_weight_16 = _tokens_img_attention_weight(
+        seperated_word_contexts, text_input, ratio=16
+    ).to(device)
+    cross_attention_weight_32 = _tokens_img_attention_weight(
+        seperated_word_contexts, text_input, ratio=32
+    ).to(device)
+    cross_attention_weight_64 = _tokens_img_attention_weight(
+        seperated_word_contexts, text_input, ratio=64
+    ).to(device)
+
+    # Compute conditional and unconditional embeddings
+    cond_embeddings = text_encoder(text_input.input_ids.to(device))[0]
+    max_length = text_input.input_ids.shape[-1]
+    uncond_input = tokenizer(
+        [unconditional_input_prompt],
+        padding="max_length",
+        max_length=max_length,
+        return_tensors="pt",
+    )
+    uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
+
+    encoder_hidden_states = {
+        "CONTEXT_TENSOR": cond_embeddings,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": cross_attention_weight_8,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": cross_attention_weight_16,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
+    }
+    
+    return extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_embeddings
+
+
+def get_latents(vae, seperated_word_contexts, 
+                init_image, latent_timestep, latent_size, seed, device, scheduler, 
+                is_extra_seed=False, extra_seeds=None):
+    if init_image is None:  # txt2img
+        latents = torch.randn(latent_size, generator=torch.manual_seed(seed))
+        if is_extra_seed:
+            print('Use region based seeding: ', extra_seeds)
+            multi_latents = [torch.randn(latent_size,
+                generator=torch.manual_seed(_seed)) for _seed in extra_seeds.values()]
+            img_where_color_mask = _get_binary_mask(seperated_word_contexts, extra_seeds, dtype=latents[0].dtype, size=latent_size[-2:])
+            foreground = (sum(img_where_color_mask) > 0).squeeze()
+            # sum seeds weighted by masks
+            summed_multi_latents = sum(_latents * _mask for _latents, _mask in zip(multi_latents, img_where_color_mask))
+            latents[:,:,foreground] = summed_multi_latents[:,:,foreground]
+        latents = latents.to(device)
+        latents = latents * scheduler.init_noise_sigma
+    else:
+        init_image = preprocess(init_image)
+        image = init_image.to(device=device)
+        init_latent_dist = vae.encode(image).latent_dist
+        init_latents = init_latent_dist.sample()
+        init_latents = 0.18215 * init_latents
+        noise = torch.randn(init_latents.shape).to(device)
+
+        # get latents
+        init_latents = scheduler.add_noise(init_latents, noise, latent_timestep)
+        latents = init_latents
+    
+    return latents
+
+
 @torch.no_grad()
 @torch.autocast("cuda")
 def paint_with_words(
@@ -288,7 +382,7 @@ def paint_with_words(
     init_image: Optional[Image.Image] = None,
     strength: float = 0.5,
 ):
-
+    width, height = color_map_image.size
     vae, unet, text_encoder, tokenizer, scheduler = (
         pww_load_tools(
             device,
@@ -301,50 +395,14 @@ def paint_with_words(
         else preloaded_utils
     )
 
-    text_input = tokenizer(
-        [input_prompt],
-        padding="max_length",
-        max_length=tokenizer.model_max_length,
-        truncation=True,
-        return_tensors="pt",
-    )
-    
-    color_context, extra_seeds, extra_sigmas = _extract_seed_and_sigma_from_context(color_context)
-    is_extra_seed, is_extra_sigma = len(extra_seeds) > 0, len(extra_sigmas) > 0
-    seperated_word_contexts, width, height = _image_context_seperator(
-        color_map_image, color_context, tokenizer
-    )
-    if is_extra_sigma:
-        print('Use extra sigma to smooth mask', extra_sigmas)
-        seperated_word_contexts = _blur_image_mask(seperated_word_contexts, extra_sigmas)
+    extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_embeddings = \
+    _encode_text_color_inputs(text_encoder, tokenizer, device, 
+        color_map_image, color_context, input_prompt, unconditional_input_prompt)
+    is_extra_seed = len(extra_seeds) > 0,
 
-    cross_attention_weight_8 = _tokens_img_attention_weight(
-        seperated_word_contexts, text_input, ratio=8
-    ).to(device)
-    cross_attention_weight_16 = _tokens_img_attention_weight(
-        seperated_word_contexts, text_input, ratio=16
-    ).to(device)
-    cross_attention_weight_32 = _tokens_img_attention_weight(
-        seperated_word_contexts, text_input, ratio=32
-    ).to(device)
-    cross_attention_weight_64 = _tokens_img_attention_weight(
-        seperated_word_contexts, text_input, ratio=64
-    ).to(device)
-
-    cond_embeddings = text_encoder(text_input.input_ids.to(device))[0]
-
-    max_length = text_input.input_ids.shape[-1]
-    uncond_input = tokenizer(
-        [unconditional_input_prompt],
-        padding="max_length",
-        max_length=max_length,
-        return_tensors="pt",
-    )
-    uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
     scheduler.set_timesteps(num_inference_steps)
     if init_image is None:
         timesteps = scheduler.timesteps
-
     else:
         offset = scheduler.config.get("steps_offset", 0)
         init_timestep = int(num_inference_steps * strength) + offset
@@ -390,18 +448,14 @@ def paint_with_words(
         latent_model_input = scheduler.scale_model_input(latents, t)
         
         _t = t if not is_mps else t.float()
+        encoder_hidden_states.update({
+                "SIGMA": sigma,
+                "WEIGHT_FUNCTION": weight_function,
+            })
         noise_pred_text = unet(
             latent_model_input,
             _t,
-            encoder_hidden_states={
-                "CONTEXT_TENSOR": cond_embeddings,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": cross_attention_weight_8,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": cross_attention_weight_16,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
-                "SIGMA": sigma,
-                "WEIGHT_FUNCTION": weight_function,
-            },
+            encoder_hidden_states=encoder_hidden_states,
         ).sample
 
         latent_model_input = scheduler.scale_model_input(latents, t)
