@@ -77,7 +77,7 @@ def pww_load_tools(
 
 def inj_forward(self, hidden_states, context=None, mask=None):
 
-    is_dict_format = True
+    is_dict_format = False
     if context is not None:
         try:
             context_tensor = context["CONTEXT_TENSOR"]
@@ -229,13 +229,10 @@ def prepare_mask_latents(
     # and half precision
     mask = F.interpolate(mask, size=(height // 8, width // 8))
     mask = mask.to(device=device, dtype=dtype)
-
     masked_image = masked_image.to(device=device, dtype=dtype)
-    # generator = generator.to(device=device)
 
     # encode the mask image into latents space so we can concatenate it to the latents
-    # masked_image_latents = vae.encode(masked_image).latent_dist.sample(generator=generator)
-    masked_image_latents = vae.encode(masked_image).latent_dist.sample()
+    masked_image_latents = vae.encode(masked_image).latent_dist.sample(generator=generator)
     masked_image_latents = 0.18215 * masked_image_latents
 
     # duplicate mask and masked_image_latents for each generation per prompt, using mps friendly method
@@ -343,10 +340,12 @@ def paint_with_words_inpaint(
     latent_timestep = timesteps[:1]
 
     # Latent
+    generator = torch.Generator(device=device)
+    generator.manual_seed(seed)
     init_image = preprocess(init_image)
     image = init_image.to(device=device)
     init_latent_dist = vae.encode(image).latent_dist
-    init_latents = init_latent_dist.sample()
+    init_latents = init_latent_dist.sample(generator=generator)
     init_latents = 0.18215 * init_latents
     noise = torch.randn(init_latents.shape).to(device)
     init_latents = scheduler.add_noise(init_latents, noise, latent_timestep)
@@ -362,7 +361,7 @@ def paint_with_words_inpaint(
         width,
         cond_embeddings.dtype,
         device,
-        generator=torch.manual_seed(seed),
+        generator=generator,
         do_classifier_free_guidance=False,
     )
 

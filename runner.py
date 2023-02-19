@@ -3,7 +3,7 @@ import math
 import dotenv
 from PIL import Image
 
-from paint_with_words import paint_with_words, paint_with_words_inpaint
+from paint_with_words import paint_with_words
 
 
 EXAMPLE_SETTING_1 = {

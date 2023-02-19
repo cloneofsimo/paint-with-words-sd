@@ -3,16 +3,27 @@ import math
 import dotenv
 from PIL import Image
 
-from paint_with_words import paint_with_words, paint_with_words_inpaint
+from paint_with_words import paint_with_words_inpaint
 
 
-EXAMPLE_SETTING_5 = {
+EXAMPLE_SETTING_1 = {
     "color_context": {
         (51, 193, 217): "yellow cat,2.0,-1",
     },
     "color_map_img_path": "contents/inpaint_examples/dog_2.png",
-    "input_prompt": "Face of a yellow cat, high resolution, sitting on a park bench",
+    "input_prompt": "Face of a yellow cat, high resolution, on a park bench",
     "output_img_path": "contents/inpaint_examples/cat_output.png",
+    "img_path": "contents/inpaint_examples/dog_on_bench.png",
+    "mask_path": "contents/inpaint_examples/dog_mask.png",
+}
+
+EXAMPLE_SETTING_2 = {
+    "color_context": {
+        (51, 193, 217): "bird,2.0,-1",
+    },
+    "color_map_img_path": "contents/inpaint_examples/dog_2.png",
+    "input_prompt": "a bird, high resolution, on a park bench",
+    "output_img_path": "contents/inpaint_examples/bird_output.png",
     "img_path": "contents/inpaint_examples/dog_on_bench.png",
     "mask_path": "contents/inpaint_examples/dog_mask.png",
 }
@@ -22,7 +33,7 @@ if __name__ == "__main__":
 
     dotenv.load_dotenv()
     
-    settings = EXAMPLE_SETTING_5
+    settings = EXAMPLE_SETTING_1
 
     color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB")
     color_context = settings["color_context"]
@@ -38,8 +49,9 @@ if __name__ == "__main__":
         num_inference_steps=30,
         guidance_scale=7.5,
         device="cuda:0",
+        seed=0,
         weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
-        strength= 1.0,
+        strength= 0.5,
     )
 
     img.save(settings["output_img_path"])
