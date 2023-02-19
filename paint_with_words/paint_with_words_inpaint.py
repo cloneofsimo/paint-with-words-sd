@@ -14,7 +14,7 @@ from .paint_with_words import (
     # pww_load_tools, 
     _extract_seed_and_sigma_from_context, 
     _image_context_seperator,_blur_image_mask,_tokens_img_attention_weight,
-    _get_binary_mask, preprocess, _pil_from_latents)
+    preprocess, _pil_from_latents)
 
 
 def pww_load_tools(
@@ -77,7 +77,7 @@ def pww_load_tools(
 
 def inj_forward(self, hidden_states, context=None, mask=None):
 
-    is_dict_format = False
+    is_dict_format = True
     if context is not None:
         try:
             context_tensor = context["CONTEXT_TENSOR"]
@@ -260,14 +260,13 @@ def paint_with_words_inpaint(
     num_inference_steps: int = 30,
     guidance_scale: float = 7.5,
     seed: int = 0,
-    scheduler_type=LMSDiscreteScheduler,
+    scheduler_type = LMSDiscreteScheduler,
     device: str = "cuda:0",
     weight_function: Callable = lambda w, sigma, qk: 0.1
     * w
     * math.log(sigma + 1)
     * qk.max(),
     local_model_path: Optional[str] = None,
-    # hf_model_path: Optional[str] = "CompVis/stable-diffusion-v1-4",
     hf_model_path: Optional[str] = "runwayml/stable-diffusion-inpainting",
     preloaded_utils: Optional[Tuple] = None,
     unconditional_input_prompt: str = "",
@@ -342,12 +341,13 @@ def paint_with_words_inpaint(
     # Latent
     generator = torch.Generator(device=device)
     generator.manual_seed(seed)
+    generator_cpu = torch.manual_seed(seed)
     init_image = preprocess(init_image)
     image = init_image.to(device=device)
     init_latent_dist = vae.encode(image).latent_dist
     init_latents = init_latent_dist.sample(generator=generator)
     init_latents = 0.18215 * init_latents
-    noise = torch.randn(init_latents.shape).to(device)
+    noise = torch.randn(init_latents.shape, generator=generator_cpu).to(device)
     init_latents = scheduler.add_noise(init_latents, noise, latent_timestep)
     latents = init_latents
 
