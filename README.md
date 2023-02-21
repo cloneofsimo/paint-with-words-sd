@@ -227,6 +227,37 @@ EXAMPLE_SETTING_4_seed = {
 ```
 where the 3rd item of context are random seed for the object. Use -1 to follow the seed set in paint_with_words function. In this example the random seed of boat is set to 2077.
 
+# Image inpainting
+Following the previous example, the figure below shows the results of image inpainting with paint-with-pord
+<!-- #region -->
+<p align="center">
+<img  src="contents/pww_inpainting.jpg">
+</p>
+<!-- #endregion -->
+
+Example
+
+```python
+img = paint_with_words_inpaint(
+    color_context=color_context,
+    color_map_image=color_map_image,
+    init_image=init_image,
+    mask_image=mask_image,
+    input_prompt=input_prompt,
+    num_inference_steps=150,
+    guidance_scale=7.5,
+    device="cuda:0",
+    seed=81,
+    weight_function=lambda w, sigma, qk: 0.15 * w * math.log(1 + sigma) * qk.max(),
+    strength = 1.0,
+)
+```
+
+To run inpainting
+
+```bash
+python runner_inpaint.py
+```
 
 # Using other Fine-tuned models
 
@@ -301,7 +332,7 @@ For example,
 - [x] Allow different models to be used. use [this](https://github.com/huggingface/diffusers/blob/main/scripts/convert_original_stable_diffusion_to_diffusers.py).
 - [ ] "negative region", where we can set some region to "not" have some semantics. can be done with classifier-free guidance.
 - [x] Img2ImgPaintWithWords -> Img2Img, but with extra text segmentation map for better control
-- [ ] InpaintPaintwithWords -> inpaint, but with extra text segmentation map for better control
+- [x] InpaintPaintwithWords -> inpaint, but with extra text segmentation map for better control
 - [x] Support for other schedulers
 
 # Acknowledgement
