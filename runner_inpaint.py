@@ -4,22 +4,39 @@ import dotenv
 from PIL import Image
 
 from paint_with_words import paint_with_words_inpaint
+from diffusers.pipelines import RePaintPipeline
+import random
 
 
 EXAMPLE_SETTING_1 = {
     "color_context": {
-        (51, 193, 217): "yellow cat,5.0,-1",
-        (61, 163, 35): "grass land,0.5",
-        (89, 102, 255): "park bench,1.5",
-        (255, 255, 255): "sky,0.5",
+        (7, 9, 182): "aurora,0.5",
+        (136, 178, 92): "full moon,1.5",
+        (51, 193, 217): "mountains,0.4",
+        (61, 163, 35): "a half-frozen lake,0.3",
+        (89, 102, 255): "boat,2.0",
     },
-    "color_map_img_path": "contents/inpaint_examples/dog_2.png",
-    "input_prompt": "Face of a yellow cat, high resolution, sitting on a park bench at the grass land under the sky",
-    "output_img_path": "contents/inpaint_examples/cat_output.png",
-    "img_path": "contents/inpaint_examples/dog_on_bench.png",
-    "mask_path": "contents/inpaint_examples/dog_mask.png",
+    "color_map_img_path": "contents/aurora_1.png",
+    "input_prompt": "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed.",
+    "output_img_path": "contents/aurora_3_output.png",
+    "img_path": "contents/aurora_1_output.png",
+    "mask_path": "contents/moon_mask.png",
 }
 
+EXAMPLE_SETTING_2 = {
+    "color_context": {
+        (7, 9, 182): "aurora,0.5",
+        (136, 178, 92): "full moon,1.5",
+        (51, 193, 217): "mountains,0.4",
+        (61, 163, 35): "a half-frozen lake,0.3",
+        (89, 102, 255): "boat,2.0",
+    },
+    "color_map_img_path": "contents/aurora_3.png",
+    "input_prompt": "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed.",
+    "output_img_path": "contents/aurora_4_output.png",
+    "img_path": "contents/aurora_1_output.png",
+    "mask_path": "contents/moon_mask.png",
+}
 
 if __name__ == "__main__":
 
@@ -32,18 +49,19 @@ if __name__ == "__main__":
     input_prompt = settings["input_prompt"]
     init_image = Image.open(settings["img_path"]).convert("RGB")
     mask_image = Image.open(settings["mask_path"])
+
     img = paint_with_words_inpaint(
         color_context=color_context,
         color_map_image=color_map_image,
         init_image=init_image,
         mask_image=mask_image,
         input_prompt=input_prompt,
-        num_inference_steps=30,
+        num_inference_steps=150,
         guidance_scale=7.5,
         device="cuda:0",
         seed=81,
-        weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
-        strength = 0.5,
+        weight_function=lambda w, sigma, qk: 0.15 * w * math.log(1 + sigma) * qk.max(),
+        strength = 1.0,
     )
 
     img.save(settings["output_img_path"])

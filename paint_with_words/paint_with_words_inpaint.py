@@ -4,132 +4,16 @@ from typing import Callable, Dict, List, Optional, Tuple,Union
 import numpy as np
 import torch
 import torch.nn.functional as F
-from diffusers import AutoencoderKL, LMSDiscreteScheduler, UNet2DConditionModel
+from diffusers import AutoencoderKL, LMSDiscreteScheduler, UNet2DConditionModel, PNDMScheduler
 from PIL import Image
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
 import torchvision.transforms as T
 
 from .paint_with_words import (
-    # pww_load_tools, 
-    _extract_seed_and_sigma_from_context, 
+    pww_load_tools, _extract_seed_and_sigma_from_context, 
     _image_context_seperator,_blur_image_mask,_tokens_img_attention_weight,
     preprocess, _pil_from_latents)
-
-
-def pww_load_tools(
-    device: str = "cuda:0",
-    scheduler_type=LMSDiscreteScheduler,
-    local_model_path: Optional[str] = None,
-    hf_model_path: Optional[str] = None,
-    model_token: Optional[str] = None,
-) -> Tuple[
-    UNet2DConditionModel,
-    CLIPTextModel,
-    CLIPTokenizer,
-    AutoencoderKL,
-    LMSDiscreteScheduler,
-]:
-
-    assert (
-        local_model_path or hf_model_path
-    ), "either local_model_path or hf_model_path must be provided"
-
-    is_mps = device == 'mps'
-    dtype = torch.float16 if not is_mps else torch.float32
-    model_path = local_model_path if local_model_path is not None else hf_model_path
-    local_path_only = local_model_path is not None
-    print(model_path)
-    vae = AutoencoderKL.from_pretrained(
-        model_path,
-        subfolder="vae",
-        use_auth_token=model_token,
-        torch_dtype=dtype,
-        local_files_only=local_path_only,
-    )
-
-    tokenizer = CLIPTokenizer.from_pretrained(model_path, subfolder="tokenizer")
-    text_encoder = CLIPTextModel.from_pretrained(model_path, subfolder="text_encoder")
-
-    unet = UNet2DConditionModel.from_pretrained(
-        model_path,
-        subfolder="unet",
-        use_auth_token=model_token,
-        torch_dtype=dtype,
-        local_files_only=local_path_only,
-    )
-
-    vae.to(device), unet.to(device), text_encoder.to(device)
-
-    for _module in unet.modules():
-        if _module.__class__.__name__ == "CrossAttention":
-            _module.__class__.__call__ = inj_forward
-
-    scheduler = scheduler_type(
-        beta_start=0.00085,
-        beta_end=0.012,
-        beta_schedule="scaled_linear",
-        num_train_timesteps=1000,
-    )
-
-    return vae, unet, text_encoder, tokenizer, scheduler
-
-
-def inj_forward(self, hidden_states, context=None, mask=None):
-
-    is_dict_format = True
-    if context is not None:
-        try:
-            context_tensor = context["CONTEXT_TENSOR"]
-        except:
-            context_tensor = context
-            is_dict_format = False
-
-    else:
-        context_tensor = hidden_states
-
-    batch_size, sequence_length, _ = hidden_states.shape
-
-    query = self.to_q(hidden_states)
-
-    key = self.to_k(context_tensor)
-    value = self.to_v(context_tensor)
-
-    dim = query.shape[-1]
-
-    query = self.reshape_heads_to_batch_dim(query)
-    key = self.reshape_heads_to_batch_dim(key)
-    value = self.reshape_heads_to_batch_dim(value)
-
-    attention_scores = torch.matmul(query, key.transpose(-1, -2))
-
-    attention_size_of_img = attention_scores.shape[-2]
-    if context is not None:
-        if is_dict_format:
-            f: Callable = context["WEIGHT_FUNCTION"]
-            w = context[f"CROSS_ATTENTION_WEIGHT_{attention_size_of_img}"]
-            sigma = context["SIGMA"]
-
-            cross_attention_weight = f(w, sigma, attention_scores)
-        else:
-            cross_attention_weight = 0.0
-    else:
-        cross_attention_weight = 0.0
-
-    attention_scores = (attention_scores + cross_attention_weight) * self.scale
-
-    attention_probs = attention_scores.softmax(dim=-1)
-
-    hidden_states = torch.matmul(attention_probs, value)
-
-    hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
-
-    # linear proj
-    hidden_states = self.to_out[0](hidden_states)
-    # dropout
-    hidden_states = self.to_out[1](hidden_states)
-
-    return hidden_states
 
 
 def prepare_mask_and_masked_image(image, mask):
