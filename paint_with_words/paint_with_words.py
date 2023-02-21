@@ -337,7 +337,7 @@ def paint_with_words(
     num_inference_steps: int = 30,
     guidance_scale: float = 7.5,
     seed: int = 0,
-    scheduler_type=LMSDiscreteScheduler,
+    scheduler_type = LMSDiscreteScheduler,
     device: str = "cuda:0",
     weight_function: Callable = lambda w, sigma, qk: 0.1
     * w

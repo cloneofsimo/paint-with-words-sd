@@ -5,6 +5,7 @@ from PIL import Image
 
 from paint_with_words import paint_with_words
 
+
 EXAMPLE_SETTING_1 = {
     "color_context": {
         (0, 0, 0): "cat,1.0",
@@ -70,6 +71,7 @@ EXAMPLE_SETTING_4_seed = {
     "output_img_path": "contents/aurora_1_seed_output.png",
 }
 
+
 if __name__ == "__main__":
 
     dotenv.load_dotenv()
@@ -79,7 +81,7 @@ if __name__ == "__main__":
     color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB")
     color_context = settings["color_context"]
     input_prompt = settings["input_prompt"]
-
+    
     img = paint_with_words(
         color_context=color_context,
         color_map_image=color_map_image,
@@ -89,5 +91,5 @@ if __name__ == "__main__":
         device="cuda:0",
         weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
     )
-
+    
     img.save(settings["output_img_path"])
