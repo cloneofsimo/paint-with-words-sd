@@ -235,9 +235,16 @@ Following the previous example, the figure below shows the results of image inpa
 </p>
 <!-- #endregion -->
 
+where the top row show the example of editing moon size by inpainting.
+The bottom row shows the example of re-synthesize the moon by using the same "input color map".
+
+
 Example
 
 ```python
+from paint_with_words import paint_with_words_inpaint
+
+
 img = paint_with_words_inpaint(
     color_context=color_context,
     color_map_image=color_map_image,
