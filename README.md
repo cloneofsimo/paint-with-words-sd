@@ -235,8 +235,8 @@ Following the previous example, the figure below shows the results of image inpa
 </p>
 <!-- #endregion -->
 
-where the top row show the example of editing moon size by inpainting.
-The bottom row shows the example of re-synthesize the moon by using the same "input color map".
+where the top row shows the example of editing moon size by inpainting.
+The bottom row shows the example of re-synthesize the moon by inpainting with the original "input color map" for text-image paint-with-word.
 
 
 Example
