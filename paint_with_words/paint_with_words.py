@@ -374,7 +374,7 @@ def paint_with_words(
 
     extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states = \
         _encode_text_color_inputs(text_encoder, tokenizer, device, color_map_image, color_context, input_prompt, unconditional_input_prompt)
-    is_extra_seed = len(extra_seeds) > 0,
+    is_extra_seed = len(extra_seeds) > 0
 
     scheduler.set_timesteps(num_inference_steps)
     if init_image is None:
