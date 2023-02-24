@@ -324,8 +324,16 @@ def _encode_text_color_inputs(
         f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
         f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
     }
-    
-    return extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_embeddings
+
+    uncond_encoder_hidden_states = {
+        "CONTEXT_TENSOR": uncond_embeddings,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": 0,
+    },
+
+    return extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states
 
 
 @torch.no_grad()
@@ -364,8 +372,9 @@ def paint_with_words(
         else preloaded_utils
     )
 
-    extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_embeddings = \
+    extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states = \
         _encode_text_color_inputs(text_encoder, tokenizer, device, color_map_image, color_context, input_prompt, unconditional_input_prompt)
+
     is_extra_seed = len(extra_seeds) > 0,
 
     scheduler.set_timesteps(num_inference_steps)
@@ -428,18 +437,14 @@ def paint_with_words(
 
         latent_model_input = scheduler.scale_model_input(latents, t)
 
+        uncond_encoder_hidden_states.update({
+                "SIGMA": sigma,
+                "WEIGHT_FUNCTION": lambda w, sigma, qk: 0.0,
+            })
         noise_pred_uncond = unet(
             latent_model_input,
             _t,
-            encoder_hidden_states={
-                "CONTEXT_TENSOR": uncond_embeddings,
-                "CROSS_ATTENTION_WEIGHT_4096": 0,
-                "CROSS_ATTENTION_WEIGHT_1024": 0,
-                "CROSS_ATTENTION_WEIGHT_256": 0,
-                "CROSS_ATTENTION_WEIGHT_64": 0,
-                "SIGMA": sigma,
-                "WEIGHT_FUNCTION": lambda w, sigma, qk: 0.0,
-            },
+            encoder_hidden_states=uncond_encoder_hidden_states,
         ).sample
 
         noise_pred = noise_pred_uncond + guidance_scale * (
