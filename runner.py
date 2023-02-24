@@ -5,6 +5,7 @@ from PIL import Image
 
 from paint_with_words import paint_with_words
 
+
 EXAMPLE_SETTING_1 = {
     "color_context": {
         (0, 0, 0): "cat,1.0",
@@ -30,7 +31,6 @@ EXAMPLE_SETTING_2 = {
     "input_prompt": "realistic photo of a dog, cat, tree, with beautiful sky, on sandy ground",
     "output_img_path": "contents/output_dog_cat.png",
 }
-
 
 EXAMPLE_SETTING_3 = {
     "color_context": {
@@ -58,16 +58,30 @@ EXAMPLE_SETTING_4 = {
     "output_img_path": "contents/aurora_1_output.png",
 }
 
+EXAMPLE_SETTING_4_seed = {
+    "color_context": {
+        (7, 9, 182): "aurora,0.5,-1",
+        (136, 178, 92): "full moon,1.5,-1",
+        (51, 193, 217): "mountains,0.4,-1",
+        (61, 163, 35): "a half-frozen lake,0.3,-1",
+        (89, 102, 255): "boat,2.0,2077",
+    },
+    "color_map_img_path": "contents/aurora_1.png",
+    "input_prompt": "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed.",
+    "output_img_path": "contents/aurora_1_seed_output.png",
+}
+
+
 if __name__ == "__main__":
 
     dotenv.load_dotenv()
 
-    settings = EXAMPLE_SETTING_3
+    settings = EXAMPLE_SETTING_4_seed
 
     color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB")
     color_context = settings["color_context"]
     input_prompt = settings["input_prompt"]
-
+    
     img = paint_with_words(
         color_context=color_context,
         color_map_image=color_map_image,
@@ -77,5 +91,5 @@ if __name__ == "__main__":
         device="cuda:0",
         weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
     )
-
+    
     img.save(settings["output_img_path"])

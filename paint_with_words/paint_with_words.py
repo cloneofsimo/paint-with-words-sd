@@ -1,5 +1,5 @@
 import math
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple,Union
 
 import numpy as np
 import PIL
@@ -9,6 +9,7 @@ from diffusers import AutoencoderKL, LMSDiscreteScheduler, UNet2DConditionModel
 from PIL import Image
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
+import torchvision.transforms as T
 
 
 def preprocess(image):
@@ -117,6 +118,8 @@ def pww_load_tools(
         local_model_path or hf_model_path
     ), "either local_model_path or hf_model_path must be provided"
 
+    is_mps = device == 'mps'
+    dtype = torch.float16 if not is_mps else torch.float32
     model_path = local_model_path if local_model_path is not None else hf_model_path
     local_path_only = local_model_path is not None
     print(model_path)
@@ -124,7 +127,7 @@ def pww_load_tools(
         model_path,
         subfolder="vae",
         use_auth_token=model_token,
-        torch_dtype=torch.float16,
+        torch_dtype=dtype,
         local_files_only=local_path_only,
     )
 
@@ -135,7 +138,7 @@ def pww_load_tools(
         model_path,
         subfolder="unet",
         use_auth_token=model_token,
-        torch_dtype=torch.float16,
+        torch_dtype=dtype,
         local_files_only=local_path_only,
     )
 
@@ -199,17 +202,16 @@ def _image_context_seperator(
 def _tokens_img_attention_weight(
     img_context_seperated, tokenized_texts, ratio: int = 8
 ):
-
+    
     token_lis = tokenized_texts["input_ids"][0].tolist()
     w, h = img_context_seperated[0][1].shape
 
     w_r, h_r = w // ratio, h // ratio
 
     ret_tensor = torch.zeros((w_r * h_r, len(token_lis)), dtype=torch.float32)
-
+    
     for v_as_tokens, img_where_color in img_context_seperated:
         is_in = 0
-
         for idx, tok in enumerate(token_lis):
             if token_lis[idx : idx + len(v_as_tokens)] == v_as_tokens:
                 is_in = 1
@@ -227,44 +229,47 @@ def _tokens_img_attention_weight(
     return ret_tensor
 
 
-@torch.no_grad()
-@torch.autocast("cuda")
-def paint_with_words(
-    color_context: Dict[Tuple[int, int, int], str] = {},
-    color_map_image: Optional[Image.Image] = None,
-    input_prompt: str = "",
-    num_inference_steps: int = 30,
-    guidance_scale: float = 7.5,
-    seed: int = 0,
-    scheduler_type=LMSDiscreteScheduler,
-    device: str = "cuda:0",
-    weight_function: Callable = lambda w, sigma, qk: 0.1
-    * w
-    * math.log(sigma + 1)
-    * qk.max(),
-    local_model_path: Optional[str] = None,
-    hf_model_path: Optional[str] = "CompVis/stable-diffusion-v1-4",
-    preloaded_utils: Optional[Tuple] = None,
-    unconditional_input_prompt: str = "",
-    model_token: Optional[str] = None,
-    init_image: Optional[Image.Image] = None,
-    strength: float = 0.5,
-):
+def _extract_seed_and_sigma_from_context(color_context, ignore_seed = -1):
+    # Split seed and sigma from color_context if provided
+    extra_seeds = {}
+    extra_sigmas = {}
+    for i, (k, _context) in enumerate(color_context.items()):
+        _context_split = _context.split(',')
+        if len(_context_split) > 2:
+            try:
+                seed = int(_context_split[-2])
+                sigma = float(_context_split[-1])
+                _context_split = _context_split[:-2]
+                extra_sigmas[i] = sigma
+            except ValueError:
+                seed = int(_context_split[-1])
+                _context_split = _context_split[:-1]
+            if seed != ignore_seed:
+                extra_seeds[i] = seed
+        color_context[k] = ','.join(_context_split)
+    return color_context, extra_seeds, extra_sigmas
 
-    vae, unet, text_encoder, tokenizer, scheduler = (
-        pww_load_tools(
-            device,
-            scheduler_type,
-            local_model_path=local_model_path,
-            hf_model_path=hf_model_path,
-            model_token=model_token,
-        )
-        if preloaded_utils is None
-        else preloaded_utils
-    )
 
-    generator = torch.manual_seed(seed)
+def _get_binary_mask(seperated_word_contexts, extra_seeds, dtype, size):
+    img_where_color_mask = [(seperated_word_contexts[k][1] > 0).type(dtype) for k in extra_seeds.keys()]
+    img_where_color_mask = [F.interpolate(mask.unsqueeze(0).unsqueeze(1), 
+        size=size, mode='bilinear') for mask in img_where_color_mask]
+    return img_where_color_mask
 
+
+def _blur_image_mask(seperated_word_contexts, extra_sigmas):
+    for k, sigma in extra_sigmas.items():
+        blurrer = T.GaussianBlur(kernel_size=(39, 39), sigma=(sigma, sigma))
+        v_as_tokens, img_where_color = seperated_word_contexts[k]
+        seperated_word_contexts[k] = (v_as_tokens, blurrer(img_where_color[None,None])[0,0])
+    return seperated_word_contexts
+
+
+def _encode_text_color_inputs(
+        text_encoder, tokenizer, device, 
+        color_map_image, color_context, 
+        input_prompt, unconditional_input_prompt):
+    # Process input prompt text
     text_input = tokenizer(
         [input_prompt],
         padding="max_length",
@@ -272,11 +277,22 @@ def paint_with_words(
         truncation=True,
         return_tensors="pt",
     )
-
+    
+    # Extract seed and sigma from color context
+    color_context, extra_seeds, extra_sigmas = _extract_seed_and_sigma_from_context(color_context)
+    is_extra_sigma = len(extra_sigmas) > 0
+    
+    # Process color map image and context
     seperated_word_contexts, width, height = _image_context_seperator(
         color_map_image, color_context, tokenizer
     )
-
+    
+    # Smooth mask with extra sigma if applicable
+    if is_extra_sigma:
+        print('Use extra sigma to smooth mask', extra_sigmas)
+        seperated_word_contexts = _blur_image_mask(seperated_word_contexts, extra_sigmas)
+    
+    # Compute cross-attention weights
     cross_attention_weight_8 = _tokens_img_attention_weight(
         seperated_word_contexts, text_input, ratio=8
     ).to(device)
@@ -290,8 +306,8 @@ def paint_with_words(
         seperated_word_contexts, text_input, ratio=64
     ).to(device)
 
+    # Compute conditional and unconditional embeddings
     cond_embeddings = text_encoder(text_input.input_ids.to(device))[0]
-
     max_length = text_input.input_ids.shape[-1]
     uncond_input = tokenizer(
         [unconditional_input_prompt],
@@ -300,10 +316,69 @@ def paint_with_words(
         return_tensors="pt",
     )
     uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
+
+    encoder_hidden_states = {
+        "CONTEXT_TENSOR": cond_embeddings,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": cross_attention_weight_8,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": cross_attention_weight_16,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
+    }
+
+    uncond_encoder_hidden_states = {
+        "CONTEXT_TENSOR": uncond_embeddings,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": 0,
+    }
+
+    return extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states
+
+
+@torch.no_grad()
+@torch.autocast("cuda")
+def paint_with_words(
+    color_context: Dict[Tuple[int, int, int], str] = {},
+    color_map_image: Optional[Image.Image] = None,
+    input_prompt: str = "",
+    num_inference_steps: int = 30,
+    guidance_scale: float = 7.5,
+    seed: int = 0,
+    scheduler_type = LMSDiscreteScheduler,
+    device: str = "cuda:0",
+    weight_function: Callable = lambda w, sigma, qk: 0.1
+    * w
+    * math.log(sigma + 1)
+    * qk.max(),
+    local_model_path: Optional[str] = None,
+    hf_model_path: Optional[str] = "CompVis/stable-diffusion-v1-4",
+    preloaded_utils: Optional[Tuple] = None,
+    unconditional_input_prompt: str = "",
+    model_token: Optional[str] = None,
+    init_image: Optional[Image.Image] = None,
+    strength: float = 0.5,
+):
+    width, height = color_map_image.size
+    vae, unet, text_encoder, tokenizer, scheduler = (
+        pww_load_tools(
+            device,
+            scheduler_type,
+            local_model_path=local_model_path,
+            hf_model_path=hf_model_path,
+            model_token=model_token,
+        )
+        if preloaded_utils is None
+        else preloaded_utils
+    )
+
+    extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states = \
+        _encode_text_color_inputs(text_encoder, tokenizer, device, color_map_image, color_context, input_prompt, unconditional_input_prompt)
+    is_extra_seed = len(extra_seeds) > 0
+
     scheduler.set_timesteps(num_inference_steps)
     if init_image is None:
         timesteps = scheduler.timesteps
-
     else:
         offset = scheduler.config.get("steps_offset", 0)
         init_timestep = int(num_inference_steps * strength) + offset
@@ -315,12 +390,18 @@ def paint_with_words(
 
     # Latent:
     if init_image is None:  # txt2img
-        latents = torch.randn(
-            (1, unet.in_channels, height // 8, width // 8),
-            generator=generator,
-        )
+        latent_size = (1, unet.in_channels, height // 8, width // 8)
+        latents = torch.randn(latent_size, generator=torch.manual_seed(seed))
+        if is_extra_seed:
+            print('Use region based seeding: ', extra_seeds)
+            multi_latents = [torch.randn(latent_size,
+                generator=torch.manual_seed(_seed)) for _seed in extra_seeds.values()]
+            img_where_color_mask = _get_binary_mask(seperated_word_contexts, extra_seeds, dtype=latents[0].dtype, size=latent_size[-2:])
+            foreground = (sum(img_where_color_mask) > 0).squeeze()
+            # sum seeds weighted by masks
+            summed_multi_latents = sum(_latents * _mask for _latents, _mask in zip(multi_latents, img_where_color_mask))
+            latents[:,:,foreground] = summed_multi_latents[:,:,foreground]
         latents = latents.to(device)
-
         latents = latents * scheduler.init_noise_sigma
     else:
         init_image = preprocess(init_image)
@@ -333,42 +414,36 @@ def paint_with_words(
         # get latents
         init_latents = scheduler.add_noise(init_latents, noise, latent_timestep)
         latents = init_latents
-
+    
+    is_mps = device == "mps"
     for t in tqdm(timesteps):
         # sigma for pww
         step_index = (scheduler.timesteps == t).nonzero().item()
         sigma = scheduler.sigmas[step_index]
 
         latent_model_input = scheduler.scale_model_input(latents, t)
-
-        noise_pred_text = unet(
-            latent_model_input,
-            t,
-            encoder_hidden_states={
-                "CONTEXT_TENSOR": cond_embeddings,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": cross_attention_weight_8,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": cross_attention_weight_16,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
+        
+        _t = t if not is_mps else t.float()
+        encoder_hidden_states.update({
                 "SIGMA": sigma,
                 "WEIGHT_FUNCTION": weight_function,
-            },
+            })
+        noise_pred_text = unet(
+            latent_model_input,
+            _t,
+            encoder_hidden_states=encoder_hidden_states,
         ).sample
 
         latent_model_input = scheduler.scale_model_input(latents, t)
 
-        noise_pred_uncond = unet(
-            latent_model_input,
-            t,
-            encoder_hidden_states={
-                "CONTEXT_TENSOR": uncond_embeddings,
-                "CROSS_ATTENTION_WEIGHT_4096": 0,
-                "CROSS_ATTENTION_WEIGHT_1024": 0,
-                "CROSS_ATTENTION_WEIGHT_256": 0,
-                "CROSS_ATTENTION_WEIGHT_64": 0,
+        uncond_encoder_hidden_states.update({
                 "SIGMA": sigma,
                 "WEIGHT_FUNCTION": lambda w, sigma, qk: 0.0,
-            },
+            })
+        noise_pred_uncond = unet(
+            latent_model_input,
+            _t,
+            encoder_hidden_states=uncond_encoder_hidden_states,
         ).sample
 
         noise_pred = noise_pred_uncond + guidance_scale * (
