@@ -3,9 +3,9 @@ import math
 import dotenv
 from PIL import Image
 
-from paint_with_words import paint_with_words_inpaint
+from paint_with_words import paint_with_words_inpaint, PaintWithWord_StableDiffusionInpaintPipeline
 from diffusers.pipelines import RePaintPipeline
-import random
+import torch
 
 
 EXAMPLE_SETTING_1 = {
@@ -50,18 +50,32 @@ if __name__ == "__main__":
     init_image = Image.open(settings["img_path"]).convert("RGB")
     mask_image = Image.open(settings["mask_path"])
 
-    img = paint_with_words_inpaint(
-        color_context=color_context,
-        color_map_image=color_map_image,
-        init_image=init_image,
-        mask_image=mask_image,
-        input_prompt=input_prompt,
-        num_inference_steps=150,
-        guidance_scale=7.5,
-        device="cuda:0",
-        seed=81,
-        weight_function=lambda w, sigma, qk: 0.15 * w * math.log(1 + sigma) * qk.max(),
-        strength = 1.0,
-    )
+    # img = paint_with_words_inpaint(
+    #     color_context=color_context,
+    #     color_map_image=color_map_image,
+    #     init_image=init_image,
+    #     mask_image=mask_image,
+    #     input_prompt=input_prompt,
+    #     num_inference_steps=150,
+    #     guidance_scale=7.5,
+    #     device="cuda:0",
+    #     seed=81,
+    #     weight_function=lambda w, sigma, qk: 0.15 * w * math.log(1 + sigma) * qk.max(),
+    #     strength = 1.0,
+    # )
+
+    pipe = PaintWithWord_StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting")
+    pipe = pipe.to("cuda")
+    generator = torch.Generator(device="cuda")
+    generator.manual_seed(0)
+    img = pipe(
+            prompt=input_prompt,
+            image=init_image,
+            color_context=color_context,
+            color_map_image=color_map_image,
+            mask_image=mask_image,
+            weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
+            generator=generator
+    ).images[0]
 
     img.save(settings["output_img_path"])
