@@ -377,7 +377,7 @@ def paint_with_words(
 
     extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states = \
         _encode_text_color_inputs(text_encoder, tokenizer, device, color_map_image, color_context, input_prompt, unconditional_input_prompt)
-    is_extra_seed = len(extra_seeds) > 0,
+    is_extra_seed = len(extra_seeds) > 0
 
     scheduler.set_timesteps(num_inference_steps)
     if init_image is None:
@@ -570,8 +570,51 @@ class PaintWithWord_StableDiffusionPipeline(StableDiffusionPipeline):
             f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": 0,
         }
 
-        return cond_embeddings.dtype, separated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states
+        return extra_seeds, cond_embeddings.dtype, separated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states
 
+    def _generate_multiseed_latents(self, height: int, width: int, 
+            extra_seeds: Optional[Dict[int, Tuple[int, int]]], 
+            seperated_word_contexts: Optional[List[torch.Tensor]],
+            seed: int = 0, 
+            latents: Optional[torch.Tensor] = None,
+            device: Optional[str] = 'cpu') -> torch.Tensor:
+        """
+        Generates a tensor of random latents for the StyleGAN2 generator model.
+
+        Args:
+        - height (int): The height of the image to generate.
+        - width (int): The width of the image to generate.
+        - seed (int): The seed to use for the random number generator.
+        - extra_seeds (Dict[int, Tuple[int, int]], optional): A dictionary mapping seed indices to (y, x) coordinate tuples. 
+            Used for region-based masking. Defaults to None.
+        - seperated_word_contexts (List[torch.Tensor], optional): A list of tensors containing word contexts for region-based masking. 
+            Used if extra_seeds is not None. Defaults to None.
+        - device (str, optional): The device to use for the tensor. Defaults to 'cpu'.
+
+        Returns:
+        - latents (torch.Tensor): A tensor of random latents with shape (1, C, H, W), where C is the number of channels 
+            in the StyleGAN2 generator input.
+        """
+        
+        if latents is not None:
+            latent_size = latents.shape
+            device = latents.device
+        else:
+            latent_size = (1, self.unet.in_channels, height // 8, width // 8)
+            latents = torch.randn(latent_size, generator=torch.manual_seed(seed))
+            latents = latents.to(device)
+
+        print('Use region based seeding: ', extra_seeds)
+        multi_latents = [torch.randn(latent_size,
+            generator=torch.manual_seed(_seed)) for _seed in extra_seeds.values()]
+        img_where_color_mask = _get_binary_mask(seperated_word_contexts, extra_seeds, dtype=latents[0].dtype, size=latent_size[-2:])
+        foreground = (sum(img_where_color_mask) > 0).squeeze()
+        # sum seeds weighted by masks
+        summed_multi_latents = sum(_latents * _mask for _latents, _mask in zip(multi_latents, img_where_color_mask))
+        summed_multi_latents = summed_multi_latents.to(device)
+        latents[:,:,foreground] = summed_multi_latents[:,:,foreground]
+        latents = latents * self.scheduler.init_noise_sigma
+        return latents
 
     @torch.no_grad()
     def __call__(
@@ -668,7 +711,7 @@ class PaintWithWord_StableDiffusionPipeline(StableDiffusionPipeline):
         # text_embeddings = self._encode_prompt(
         #     prompt, device, num_images_per_prompt, do_classifier_free_guidance, negative_prompt
         # )
-        text_embeddings_type, seperated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states = \
+        extra_seeds, text_embeddings_type, seperated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states = \
             self._encode_text_color_inputs(device, color_map_image, color_context, prompt, negative_prompt)
 
         # 4. Prepare timesteps
@@ -687,6 +730,9 @@ class PaintWithWord_StableDiffusionPipeline(StableDiffusionPipeline):
             generator,
             latents,
         )
+        if len(extra_seeds) > 0:
+            latents = self._generate_multiseed_latents(
+                height, width, extra_seeds, seperated_word_contexts, seed, latents, device)
 
         # 6. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
