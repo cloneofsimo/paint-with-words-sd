@@ -11,9 +11,7 @@ from transformers import CLIPTextModel, CLIPTokenizer
 import torchvision.transforms as T
 
 from .paint_with_words import (
-    pww_load_tools, _extract_seed_and_sigma_from_context, 
-    _image_context_seperator,_blur_image_mask,_tokens_img_attention_weight,
-    preprocess, _pil_from_latents)
+    pww_load_tools, preprocess, _pil_from_latents, _encode_text_color_inputs)
 
 
 def prepare_mask_and_masked_image(image, mask):
@@ -170,47 +168,10 @@ def paint_with_words_inpaint(
         else preloaded_utils
     )
 
-    text_input = tokenizer(
-        [input_prompt],
-        padding="max_length",
-        max_length=tokenizer.model_max_length,
-        truncation=True,
-        return_tensors="pt",
-    )
-    
-    color_context, extra_seeds, extra_sigmas = _extract_seed_and_sigma_from_context(color_context)
-    is_extra_seed, is_extra_sigma = len(extra_seeds) > 0, len(extra_sigmas) > 0
-    seperated_word_contexts, width, height = _image_context_seperator(
-        color_map_image, color_context, tokenizer
-    )
-    if is_extra_sigma:
-        print('Use extra sigma to smooth mask', extra_sigmas)
-        seperated_word_contexts = _blur_image_mask(seperated_word_contexts, extra_sigmas)
+    width, height = init_image.size
+    _, _, encoder_hidden_states, uncond_encoder_hidden_states = \
+        _encode_text_color_inputs(text_encoder, tokenizer, device, color_map_image, color_context, input_prompt, unconditional_input_prompt)
 
-    cross_attention_weight_8 = _tokens_img_attention_weight(
-        seperated_word_contexts, text_input, ratio=8
-    ).to(device)
-    cross_attention_weight_16 = _tokens_img_attention_weight(
-        seperated_word_contexts, text_input, ratio=16
-    ).to(device)
-    cross_attention_weight_32 = _tokens_img_attention_weight(
-        seperated_word_contexts, text_input, ratio=32
-    ).to(device)
-    cross_attention_weight_64 = _tokens_img_attention_weight(
-        seperated_word_contexts, text_input, ratio=64
-    ).to(device)
-
-    cond_embeddings = text_encoder(text_input.input_ids.to(device))[0]
-
-    max_length = text_input.input_ids.shape[-1]
-    uncond_input = tokenizer(
-        [unconditional_input_prompt],
-        padding="max_length",
-        max_length=max_length,
-        return_tensors="pt",
-    )
-    uncond_embeddings = text_encoder(uncond_input.input_ids.to(device))[0]
-    
     mask, masked_image = prepare_mask_and_masked_image(init_image, mask_image)
     
     scheduler.set_timesteps(num_inference_steps)
@@ -243,7 +204,7 @@ def paint_with_words_inpaint(
         1,
         height,
         width,
-        cond_embeddings.dtype,
+        latents.dtype,
         device,
         generator=generator,
         do_classifier_free_guidance=False,
@@ -271,34 +232,26 @@ def paint_with_words_inpaint(
         latent_model_input = scheduler.scale_model_input(latents, t)
         latent_model_input = torch.cat([latent_model_input, mask, masked_image_latents], dim=1)
         _t = t if not is_mps else t.float()
+        encoder_hidden_states.update({
+                "SIGMA": sigma,
+                "WEIGHT_FUNCTION": weight_function,
+            })
         noise_pred_text = unet(
             latent_model_input,
             _t,
-            encoder_hidden_states={
-                "CONTEXT_TENSOR": cond_embeddings,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": cross_attention_weight_8,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": cross_attention_weight_16,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
-                f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
-                "SIGMA": sigma,
-                "WEIGHT_FUNCTION": weight_function,
-            },
+            encoder_hidden_states=encoder_hidden_states,
         ).sample
 
         latent_model_input = scheduler.scale_model_input(latents, t)
         latent_model_input = torch.cat([latent_model_input, mask, masked_image_latents], dim=1)
+        uncond_encoder_hidden_states.update({
+                "SIGMA": sigma,
+                "WEIGHT_FUNCTION": lambda w, sigma, qk: 0.0,
+            })
         noise_pred_uncond = unet(
             latent_model_input,
             _t,
-            encoder_hidden_states={
-                "CONTEXT_TENSOR": uncond_embeddings,
-                "CROSS_ATTENTION_WEIGHT_4096": 0,
-                "CROSS_ATTENTION_WEIGHT_1024": 0,
-                "CROSS_ATTENTION_WEIGHT_256": 0,
-                "CROSS_ATTENTION_WEIGHT_64": 0,
-                "SIGMA": sigma,
-                "WEIGHT_FUNCTION": lambda w, sigma, qk: 0.0,
-            },
+            encoder_hidden_states=uncond_encoder_hidden_states,
         ).sample
 
         noise_pred = noise_pred_uncond + guidance_scale * (
