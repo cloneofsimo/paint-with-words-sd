@@ -75,6 +75,7 @@ if __name__ == "__main__":
             color_map_image=color_map_image,
             mask_image=mask_image,
             weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
+            eta=1.0,
             generator=generator
     ).images[0]
 

@@ -9,7 +9,7 @@ from PIL import Image
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer, CLIPFeatureExtractor
 import torchvision.transforms as T
-from diffusers import StableDiffusionInpaintPipeline
+# from diffusers import StableDiffusionInpaintPipeline, StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipelineOutput
 
 
@@ -270,7 +270,7 @@ def paint_with_words_inpaint(
     return ret_pil_images[0]
 
 
-class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusionPipeline, StableDiffusionInpaintPipeline):
+class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusionPipeline):
     def __init__(self,
         vae: AutoencoderKL,
         text_encoder: CLIPTextModel,
@@ -289,7 +289,53 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
             scheduler=scheduler,
             safety_checker=safety_checker,
             feature_extractor=feature_extractor,
-            requires_safety_checker=requires_safety_checker)
+            requires_safety_checker=requires_safety_checker
+        )
+    
+    @classmethod
+    def from_pretrained(self, save_dir, **kwargs):
+        sd = super().from_pretrained(save_dir, **kwargs)
+        self = PaintWithWord_StableDiffusionInpaintPipeline(
+            vae=sd.vae,
+            text_encoder=sd.text_encoder,
+            tokenizer=sd.tokenizer,
+            unet=sd.unet,
+            scheduler=sd.scheduler,
+            safety_checker=sd.safety_checker,
+            feature_extractor=sd.feature_extractor,
+            requires_safety_checker=sd.requires_safety_checker
+        )
+        return self
+
+    def prepare_mask_latents(
+        self, mask, masked_image, batch_size, height, width, dtype, device, generator, do_classifier_free_guidance
+    ):
+        # resize the mask to latents shape as we concatenate the mask to the latents
+        # we do that before converting to dtype to avoid breaking in case we're using cpu_offload
+        # and half precision
+        mask = torch.nn.functional.interpolate(
+            mask, size=(height // self.vae_scale_factor, width // self.vae_scale_factor)
+        )
+        mask = mask.to(device=device, dtype=dtype)
+
+        masked_image = masked_image.to(device=device, dtype=dtype)
+
+        # encode the mask image into latents space so we can concatenate it to the latents
+        masked_image_latents = self.vae.encode(masked_image).latent_dist.sample(generator=generator)
+        masked_image_latents = 0.18215 * masked_image_latents
+
+        # duplicate mask and masked_image_latents for each generation per prompt, using mps friendly method
+        mask = mask.repeat(batch_size, 1, 1, 1)
+        masked_image_latents = masked_image_latents.repeat(batch_size, 1, 1, 1)
+
+        mask = torch.cat([mask] * 2) if do_classifier_free_guidance else mask
+        masked_image_latents = (
+            torch.cat([masked_image_latents] * 2) if do_classifier_free_guidance else masked_image_latents
+        )
+
+        # aligning device to prevent device errors when concating it with the latent model input
+        masked_image_latents = masked_image_latents.to(device=device, dtype=dtype)
+        return mask, masked_image_latents
 
     @torch.no_grad()
     def __call__(
@@ -429,7 +475,7 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
             text_embeddings_type,
             device,
             generator,
-            do_classifier_free_guidance,
+            do_classifier_free_guidance=False,
         )
 
         # 8. Check that sizes of mask, masked image and latents match
