@@ -3,7 +3,7 @@ import math
 import dotenv
 from PIL import Image
 
-from paint_with_words import paint_with_words_inpaint, PaintWithWord_StableDiffusionInpaintPipeline
+from paint_with_words import PaintWithWord_StableDiffusionRepaintPipeline
 import torch
 
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     use_pipeline = True
     if use_pipeline:
-        pipe = PaintWithWord_StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting")
+        pipe = PaintWithWord_StableDiffusionRepaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting")
         pipe = pipe.to("cuda")
         generator = torch.Generator(device="cuda")
         generator.manual_seed(81)
