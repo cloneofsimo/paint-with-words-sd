@@ -542,7 +542,8 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
         image = self.decode_latents(latents)
 
         # 12. Run safety checker
-        image, has_nsfw_concept = self.run_safety_checker(image, device, text_embeddings_type)
+        # image, has_nsfw_concept = self.run_safety_checker(image, device, text_embeddings_type)
+        has_nsfw_concept = False
 
         # 13. Convert to PIL
         if output_type == "pil":
