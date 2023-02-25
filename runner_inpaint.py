@@ -4,7 +4,6 @@ import dotenv
 from PIL import Image
 
 from paint_with_words import paint_with_words_inpaint, PaintWithWord_StableDiffusionInpaintPipeline
-from diffusers.pipelines import RePaintPipeline
 import torch
 
 

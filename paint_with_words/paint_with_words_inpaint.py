@@ -9,7 +9,6 @@ from PIL import Image
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer, CLIPFeatureExtractor
 import torchvision.transforms as T
-# from diffusers import StableDiffusionInpaintPipeline, StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipelineOutput
 
 
