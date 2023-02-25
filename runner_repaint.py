@@ -50,9 +50,8 @@ if __name__ == "__main__":
     mask_image = Image.open(settings["mask_path"])
 
     pipe = PaintWithWord_StableDiffusionRepaintPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
-    pipe = pipe.to("cpu")
-    generator = torch.Generator(device="cpu")
-    # generator = torch.Generator(device="cuda")
+    pipe = pipe.to("cuda")
+    generator = torch.Generator(device="cuda")
     generator.manual_seed(81)
     img = pipe(
             prompt=input_prompt,

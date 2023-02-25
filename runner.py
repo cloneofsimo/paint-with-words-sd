@@ -85,8 +85,7 @@ if __name__ == "__main__":
     use_pipeline = True
     if use_pipeline:
         pipe = PaintWithWord_StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
-        # pipe = pipe.to("cuda")
-        pipe = pipe.to("cpu")
+        pipe = pipe.to("cuda")
         img = pipe(color_context=color_context,
                 color_map_image=color_map_image,
                 prompt=input_prompt,
