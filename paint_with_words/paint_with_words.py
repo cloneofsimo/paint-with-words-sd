@@ -588,6 +588,7 @@ class PaintWithWord_StableDiffusionPipeline(StableDiffusionPipeline):
         eta: float = 0.5,
         seed: Optional[int] = 0,
         generator: Optional[torch.Generator] = None,
+        image: Optional[Image.Image] = None,
         latents: Optional[torch.FloatTensor] = None,
         output_type: Optional[str] = "pil",
         return_dict: bool = True,
@@ -672,7 +673,16 @@ class PaintWithWord_StableDiffusionPipeline(StableDiffusionPipeline):
 
         # 4. Prepare timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=device)
-        timesteps = self.scheduler.timesteps
+        if image is None:
+            timesteps = self.scheduler.timesteps
+        else:
+            offset = self.scheduler.config.get("steps_offset", 0)
+            init_timestep = int(num_inference_steps * eta) + offset
+            init_timestep = min(init_timestep, num_inference_steps)
+            t_start = max(num_inference_steps - init_timestep + offset, 0)
+            timesteps = self.scheduler.timesteps[t_start:]
+            num_inference_steps = num_inference_steps - t_start
+            latent_timestep = timesteps[:1]
 
         # 5. Prepare latent variables
         num_channels_latents = self.unet.in_channels
@@ -686,20 +696,31 @@ class PaintWithWord_StableDiffusionPipeline(StableDiffusionPipeline):
         #     generator,
         #     latents,
         # )
-        latent_size = (1, self.unet.in_channels, height // 8, width // 8)
-        latents = torch.randn(latent_size, generator=torch.manual_seed(seed))
-        if len(extra_seeds) > 0:
-            print('Use region based seeding: ', extra_seeds)
-            multi_latents = [torch.randn(latent_size,
-                generator=torch.manual_seed(_seed)) for _seed in extra_seeds.values()]
-            img_where_color_mask = _get_binary_mask(seperated_word_contexts, extra_seeds, dtype=latents[0].dtype, size=latent_size[-2:])
-            foreground = (sum(img_where_color_mask) > 0).squeeze()
-            # sum seeds weighted by masks
-            summed_multi_latents = sum(_latents * _mask for _latents, _mask in zip(multi_latents, img_where_color_mask))
-            latents[:,:,foreground] = summed_multi_latents[:,:,foreground]
-        latents = latents.to(device)
-        latents = latents * self.scheduler.init_noise_sigma
-
+        # Latent:
+        if image is None:  # txt2img
+            latent_size = (1, self.unet.in_channels, height // 8, width // 8)
+            latents = torch.randn(latent_size, generator=torch.manual_seed(seed))
+            if len(extra_seeds) > 0:
+                print('Use region based seeding: ', extra_seeds)
+                multi_latents = [torch.randn(latent_size,
+                    generator=torch.manual_seed(_seed)) for _seed in extra_seeds.values()]
+                img_where_color_mask = _get_binary_mask(seperated_word_contexts, extra_seeds, dtype=latents[0].dtype, size=latent_size[-2:])
+                foreground = (sum(img_where_color_mask) > 0).squeeze()
+                # sum seeds weighted by masks
+                summed_multi_latents = sum(_latents * _mask for _latents, _mask in zip(multi_latents, img_where_color_mask))
+                latents[:,:,foreground] = summed_multi_latents[:,:,foreground]
+            latents = latents.to(device)
+            latents = latents * self.scheduler.init_noise_sigma
+        else:
+            image = preprocess(image)
+            image = image.to(device=device)
+            init_latent_dist = self.vae.encode(image).latent_dist
+            init_latents = init_latent_dist.sample()
+            init_latents = 0.18215 * init_latents
+            noise = torch.randn(init_latents.shape).to(device)
+            # get latents
+            init_latents = self.scheduler.add_noise(init_latents, noise, latent_timestep)
+            latents = init_latents
 
         # 6. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
