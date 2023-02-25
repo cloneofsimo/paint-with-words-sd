@@ -352,7 +352,7 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
         guidance_scale: float = 7.5,
         negative_prompt: Optional[Union[str, List[str]]] = "",
         num_images_per_prompt: Optional[int] = 1,
-        eta: float = 0.5,
+        eta: float = 1.0,
         seed: Optional[int] = 0,
         generator: Optional[torch.Generator] = None,
         latents: Optional[torch.FloatTensor] = None,
@@ -450,20 +450,39 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
 
         # 5. set timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=device)
-        timesteps = self.scheduler.timesteps
+        # timesteps = self.scheduler.timesteps
+        offset = self.scheduler.config.get("steps_offset", 0)
+        init_timestep = int(num_inference_steps * eta) + offset
+        init_timestep = min(init_timestep, num_inference_steps)
+        t_start = max(num_inference_steps - init_timestep + offset, 0)
+        timesteps = self.scheduler.timesteps[t_start:]
+        num_inference_steps = num_inference_steps - t_start
+        latent_timestep = timesteps[:1]
 
         # 6. Prepare latent variables
         num_channels_latents = self.vae.config.latent_channels
-        latents = self.prepare_latents(
-            batch_size * num_images_per_prompt,
-            num_channels_latents,
-            height,
-            width,
-            text_embeddings_type,
-            device,
-            generator,
-            latents,
-        )
+        # latents = self.prepare_latents(
+        #     batch_size * num_images_per_prompt,
+        #     num_channels_latents,
+        #     height,
+        #     width,
+        #     text_embeddings_type,
+        #     device,
+        #     generator,
+        #     latents,
+        # )
+        # Latent
+        generator = torch.Generator(device=device)
+        generator.manual_seed(seed)
+        generator_cpu = torch.manual_seed(seed)
+        image = preprocess(image)
+        image = image.to(device=device)
+        init_latent_dist = self.vae.encode(image).latent_dist
+        init_latents = init_latent_dist.sample(generator=generator)
+        init_latents = 0.18215 * init_latents
+        noise = torch.randn(init_latents.shape, generator=generator_cpu).to(device)
+        init_latents = self.scheduler.add_noise(init_latents, noise, latent_timestep)
+        latents = init_latents
 
         # 7. Prepare mask latent variables
         mask, masked_image_latents = self.prepare_mask_latents(

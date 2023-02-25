@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     dotenv.load_dotenv()
     
-    settings = EXAMPLE_SETTING_1
+    settings = EXAMPLE_SETTING_2
 
     color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB")
     color_context = settings["color_context"]
@@ -62,7 +62,10 @@ if __name__ == "__main__":
                 color_context=color_context,
                 color_map_image=color_map_image,
                 mask_image=mask_image,
-                weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
+                num_inference_steps=150,
+                guidance_scale=7.5,
+                seed=81,           
+                weight_function=lambda w, sigma, qk: 0.15 * w * math.log(1 + sigma) * qk.max(),
                 eta=1.0,
                 generator=generator
         ).images[0]
