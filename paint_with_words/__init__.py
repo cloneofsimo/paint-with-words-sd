@@ -1,4 +1,3 @@
 from .paint_with_words import paint_with_words, pww_load_tools, PaintWithWord_StableDiffusionPipeline
 from .paint_with_words_inpaint import paint_with_words_inpaint, PaintWithWord_StableDiffusionInpaintPipeline
-from .paint_with_words_repaint import PaintWithWord_StableDiffusionRepaintPipeline
 from .utils import fig_from_settings
