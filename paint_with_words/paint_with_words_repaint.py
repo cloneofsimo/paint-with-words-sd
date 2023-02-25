@@ -10,7 +10,8 @@ from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer, CLIPFeatureExtractor
 import torchvision.transforms as T
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipelineOutput
-from diffusers.pipelines import RePaintScheduler
+from diffusers.schedulers import RePaintScheduler
+
 
 from .paint_with_words import (
     PaintWithWord_StableDiffusionPipeline, preprocess)
@@ -127,15 +128,12 @@ class PaintWithWord_StableDiffusionRepaintPipeline(PaintWithWord_StableDiffusion
             requires_safety_checker=requires_safety_checker
         )
         self.scheduler = RePaintScheduler(
-            num_train_timesteps: int = 1000,
-            beta_start: float = 0.0001,
-            beta_end: float = 0.02,
-            beta_schedule: str = "linear",
-            eta: float = 0.0,
-            trained_betas: Optional[np.ndarray] = None,
-            clip_sample: bool = True,
+            num_train_timesteps = 1000,
+            beta_start= 0.0001,
+            beta_end = 0.02,
+            beta_schedule = "linear",
+            eta = 0.0,
         )
-    
     
     @classmethod
     def from_pretrained(self, save_dir, **kwargs):
@@ -151,6 +149,36 @@ class PaintWithWord_StableDiffusionRepaintPipeline(PaintWithWord_StableDiffusion
             requires_safety_checker=sd.requires_safety_checker
         )
         return self
+
+    def prepare_mask_latents(
+        self, mask, masked_image, batch_size, height, width, dtype, device, generator, do_classifier_free_guidance
+    ):
+        # resize the mask to latents shape as we concatenate the mask to the latents
+        # we do that before converting to dtype to avoid breaking in case we're using cpu_offload
+        # and half precision
+        mask = torch.nn.functional.interpolate(
+            mask, size=(height // self.vae_scale_factor, width // self.vae_scale_factor)
+        )
+        mask = mask.to(device=device, dtype=dtype)
+
+        masked_image = masked_image.to(device=device, dtype=dtype)
+
+        # encode the mask image into latents space so we can concatenate it to the latents
+        masked_image_latents = self.vae.encode(masked_image).latent_dist.sample(generator=generator)
+        masked_image_latents = 0.18215 * masked_image_latents
+
+        # duplicate mask and masked_image_latents for each generation per prompt, using mps friendly method
+        mask = mask.repeat(batch_size, 1, 1, 1)
+        masked_image_latents = masked_image_latents.repeat(batch_size, 1, 1, 1)
+
+        mask = torch.cat([mask] * 2) if do_classifier_free_guidance else mask
+        masked_image_latents = (
+            torch.cat([masked_image_latents] * 2) if do_classifier_free_guidance else masked_image_latents
+        )
+
+        # aligning device to prevent device errors when concating it with the latent model input
+        masked_image_latents = masked_image_latents.to(device=device, dtype=dtype)
+        return mask, masked_image_latents
 
     @torch.no_grad()
     def __call__(
@@ -253,7 +281,7 @@ class PaintWithWord_StableDiffusionRepaintPipeline(PaintWithWord_StableDiffusion
         # here `guidance_scale` is defined analog to the guidance weight `w` of equation (2)
         # of the Imagen paper: https://arxiv.org/pdf/2205.11487.pdf . `guidance_scale = 1`
         # corresponds to doing no classifier free guidance.
-        do_classifier_free_guidance = guidance_scale > 1.0
+        # do_classifier_free_guidance = guidance_scale > 1.0
 
         # 3. Encode input prompt
         # text_embeddings = self._encode_prompt(
@@ -267,28 +295,20 @@ class PaintWithWord_StableDiffusionRepaintPipeline(PaintWithWord_StableDiffusion
 
         # 5. set timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=device)
-        # timesteps = self.scheduler.timesteps
+        # self.repaint_scheduler.set_timesteps(num_inference_steps, jump_length, jump_n_sample, device=device)
+        # self.repaint_scheduler.eta = eta
+        # t_last = self.repaint_scheduler.timesteps[0] + 1
         offset = self.scheduler.config.get("steps_offset", 0)
         init_timestep = int(num_inference_steps * eta) + offset
         init_timestep = min(init_timestep, num_inference_steps)
         t_start = max(num_inference_steps - init_timestep + offset, 0)
-        timesteps = self.scheduler.timesteps[t_start:]
+        timesteps = self.repaint_scheduler.timesteps[t_start:]
+        # timesteps = self.scheduler.timesteps[t_start:]
         num_inference_steps = num_inference_steps - t_start
         latent_timestep = timesteps[:1]
 
         # 6. Prepare latent variables
         num_channels_latents = self.vae.config.latent_channels
-        # latents = self.prepare_latents(
-        #     batch_size * num_images_per_prompt,
-        #     num_channels_latents,
-        #     height,
-        #     width,
-        #     text_embeddings_type,
-        #     device,
-        #     generator,
-        #     latents,
-        # )
-        # Latent
         generator = torch.Generator(device=device)
         generator.manual_seed(seed)
         generator_cpu = torch.manual_seed(seed)
@@ -298,8 +318,7 @@ class PaintWithWord_StableDiffusionRepaintPipeline(PaintWithWord_StableDiffusion
         init_latents = init_latent_dist.sample(generator=generator)
         init_latents = 0.18215 * init_latents
         noise = torch.randn(init_latents.shape, generator=generator_cpu).to(device)
-        init_latents = self.scheduler.add_noise(init_latents, noise, latent_timestep)
-        latents = init_latents
+        latents = self.scheduler.add_noise(init_latents, noise, latent_timestep)
 
         # 7. Prepare mask latent variables
         mask, masked_image_latents = self.prepare_mask_latents(
@@ -314,77 +333,53 @@ class PaintWithWord_StableDiffusionRepaintPipeline(PaintWithWord_StableDiffusion
             do_classifier_free_guidance=False,
         )
 
-        # 8. Check that sizes of mask, masked image and latents match
-        num_channels_mask = mask.shape[1]
-        num_channels_masked_image = masked_image_latents.shape[1]
-        if num_channels_latents + num_channels_mask + num_channels_masked_image != self.unet.config.in_channels:
-            raise ValueError(
-                f"Incorrect configuration settings! The config of `pipeline.unet`: {self.unet.config} expects"
-                f" {self.unet.config.in_channels} but received `num_channels_latents`: {num_channels_latents} +"
-                f" `num_channels_mask`: {num_channels_mask} + `num_channels_masked_image`: {num_channels_masked_image}"
-                f" = {num_channels_latents+num_channels_masked_image+num_channels_mask}. Please verify the config of"
-                " `pipeline.unet` or your `mask_image` or `image` input."
-            )
-
-        # 9. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
+        # 8. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
 
-        # 10. Denoising loop
+        # 9. Denoising loop
         num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
-                step_index = (self.scheduler.timesteps == t).nonzero().item()
-                sigma = self.scheduler.sigmas[step_index]
+                if t < t_last:
+                    step_index = (self.scheduler.timesteps == t).nonzero().item()
+                    sigma = self.scheduler.sigmas[step_index]
 
-                latent_model_input = self.scheduler.scale_model_input(latents, t)
-                latent_model_input = torch.cat([latent_model_input, mask, masked_image_latents], dim=1)
-                # _t = t if not is_mps else t.float()
-                encoder_hidden_states.update({
-                        "SIGMA": sigma,
-                        "WEIGHT_FUNCTION": weight_function,
-                    })
-                noise_pred_text = self.unet(
-                    latent_model_input,
-                    t,
-                    encoder_hidden_states=encoder_hidden_states,
-                ).sample
+                    latent_model_input = self.scheduler.scale_model_input(latents, t)
+                    # latent_model_input = torch.cat([latent_model_input, mask, masked_image_latents], dim=1)
 
-                latent_model_input = self.scheduler.scale_model_input(latents, t)
-                latent_model_input = torch.cat([latent_model_input, mask, masked_image_latents], dim=1)
-                uncond_encoder_hidden_states.update({
-                        "SIGMA": sigma,
-                        "WEIGHT_FUNCTION": lambda w, sigma, qk: 0.0,
-                    })
-                noise_pred_uncond = self.unet(
-                    latent_model_input,
-                    t,
-                    encoder_hidden_states=uncond_encoder_hidden_states,
-                ).sample
+                    encoder_hidden_states.update({
+                            "SIGMA": sigma,
+                            "WEIGHT_FUNCTION": weight_function,
+                        })
+                    noise_pred_text = self.unet(
+                        latent_model_input,
+                        t,
+                        encoder_hidden_states=encoder_hidden_states,
+                    ).sample
 
-                noise_pred = noise_pred_uncond + guidance_scale * (
-                    noise_pred_text - noise_pred_uncond
-                )
+                    latent_model_input = self.scheduler.scale_model_input(latents, t)
+                    # latent_model_input = torch.cat([latent_model_input, mask, masked_image_latents], dim=1)
+                    uncond_encoder_hidden_states.update({
+                            "SIGMA": sigma,
+                            "WEIGHT_FUNCTION": lambda w, sigma, qk: 0.0,
+                        })
+                    noise_pred_uncond = self.unet(
+                        latent_model_input,
+                        t,
+                        encoder_hidden_states=uncond_encoder_hidden_states,
+                    ).sample
 
-                # compute the previous noisy sample x_t -> x_t-1
-                latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+                    noise_pred = noise_pred_uncond + guidance_scale * (
+                        noise_pred_text - noise_pred_uncond
+                    )
 
-                """RePaint"""
-                # set step values
-                self.scheduler.set_timesteps(num_inference_steps, jump_length, jump_n_sample, self.device)
-                self.scheduler.eta = eta
-
-                t_last = self.scheduler.timesteps[0] + 1
-                for i, t in enumerate(tqdm(self.scheduler.timesteps)):
-                    if t < t_last:
-                        # predict the noise residual
-                        model_output = self.unet(image, t).sample
-                        # compute previous image: x_t -> x_t-1
-                        image = self.scheduler.step(model_output, t, image, original_image, mask_image, generator).prev_sample
-
-                    else:
-                        # compute the reverse: x_t-1 -> x_t
-                        image = self.scheduler.undo_step(image, t_last, generator)
-                    t_last = t
+                    # compute the previous noisy sample x_t -> x_t-1
+                    # latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+                    latents = self.repaint_scheduler.step(noise_pred, t, latents, init_latents, mask_image, generator).prev_sample                   
+                else:
+                    # compute the reverse: x_t-1 -> x_t
+                    latents = self.repaint_scheduler.undo_step(latents, t_last, generator)
+                t_last = t
 
                 # call the callback, if provided
                 if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
@@ -392,14 +387,14 @@ class PaintWithWord_StableDiffusionRepaintPipeline(PaintWithWord_StableDiffusion
                     if callback is not None and i % callback_steps == 0:
                         callback(i, t, latents)
 
-        # 11. Post-processing
+        # 10. Post-processing
         image = self.decode_latents(latents)
 
-        # 12. Run safety checker
+        # 11. Run safety checker
         # image, has_nsfw_concept = self.run_safety_checker(image, device, text_embeddings_type)
         has_nsfw_concept = False
 
-        # 13. Convert to PIL
+        # 12. Convert to PIL
         if output_type == "pil":
             image = self.numpy_to_pil(image)
 
