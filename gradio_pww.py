@@ -150,8 +150,8 @@ with block:
             device = gr.inputs.Dropdown(label='Device', default='cuda', choices=['cuda', 'mps'])
             run_button = gr.Button(value="Run Paint-with-Word")
             with gr.Accordion("Advanced options", open=False):
-                width = gr.Slider(label="Width", minimum=32, maximum=1024, value=512, step=32)
-                height = gr.Slider(label="Height", minimum=32, maximum=1024, value=512, step=32)
+                width = gr.Slider(label="Width", minimum=256, maximum=1024, value=512, step=256)
+                height = gr.Slider(label="Height", minimum=256, maximum=1024, value=512, step=256)
                 num_samples = gr.Slider(label="Images", minimum=1, maximum=12, value=1, step=1)
                 ddim_steps = gr.Slider(label="Steps", minimum=1, maximum=100, value=30, step=1)
                 scale = gr.Slider(label="Guidance Scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
