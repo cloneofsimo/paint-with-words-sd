@@ -2,8 +2,8 @@ import math
 
 import dotenv
 from PIL import Image
-
-from paint_with_words import paint_with_words
+import torch 
+from paint_with_words import paint_with_words, PaintWithWord_StableDiffusionPipeline
 
 
 EXAMPLE_SETTING_1 = {
@@ -82,14 +82,26 @@ if __name__ == "__main__":
     color_context = settings["color_context"]
     input_prompt = settings["input_prompt"]
     
-    img = paint_with_words(
-        color_context=color_context,
-        color_map_image=color_map_image,
-        input_prompt=input_prompt,
-        num_inference_steps=30,
-        guidance_scale=7.5,
-        device="cuda:0",
-        weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
-    )
-    
+    use_pipeline = True
+    if use_pipeline:
+        pipe = PaintWithWord_StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
+        pipe = pipe.to("cuda")
+        img = pipe(color_context=color_context,
+                color_map_image=color_map_image,
+                prompt=input_prompt,
+                num_inference_steps=30,
+                guidance_scale=7.5,
+                weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
+        ).images[0]
+    else:
+        img = paint_with_words(
+            color_context=color_context,
+            color_map_image=color_map_image,
+            input_prompt=input_prompt,
+            num_inference_steps=30,
+            guidance_scale=7.5,
+            device="cuda:0",
+            weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
+        )
+
     img.save(settings["output_img_path"])
