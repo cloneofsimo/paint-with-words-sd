@@ -309,7 +309,9 @@ You can view the minimal working notebook [here](./contents/notebooks/paint_with
 ---
 
 # Gradio interface
+## Paint-with-word
 To launch gradio api
+
 ```bash
 python gradio_pww.py
 ```
@@ -323,6 +325,41 @@ python gradio_pww.py
 Noting that the "Color context" should follows the format defined as the example in runner.py. 
 For example, 
 > {(7, 9, 182): "aurora,0.5,-1",(136, 178, 92): "full moon,1.5,-1",(51, 193, 217): "mountains,0.4,-1",(61, 163, 35): "a half-frozen lake,0.3,-1",(89, 102, 255): "boat,2.0,2077",}
+
+One can expand the "Color content option". 
+Press the button "Extract color content" to extract the unique color of images,
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/gradio_color_content_demo_0.png">
+</p>
+<!-- #endregion -->
+
+The textbox will be initialized with "(colors):obj,0.5,-1", where 0.5 are strength of text embedding and -1 is random seed.
+One can then replace "obj" with the object appear in the prompt. Importantly, don't use "," in the object, as this is the separator of the color content.
+
+Click the button "Generate color content" to collect all the contents into "Color content" the textbox as the formal input of Paint-with-word.
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/gradio_color_content_demo_0.png">
+</p>
+<!-- #endregion -->
+
+Same function is supported for Paint-with-word for image inpainting as shown below
+
+## Paint-with-word for image inpainting
+To launch gradio api
+
+```bash
+python gradio_pww_inpaint.py
+```
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/gradio_inpaint_demo.png">
+</p>
+<!-- #endregion -->
 
 
 # TODO
