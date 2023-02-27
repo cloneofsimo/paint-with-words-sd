@@ -49,7 +49,7 @@ if __name__ == "__main__":
     init_image = Image.open(settings["img_path"]).convert("RGB")
     mask_image = Image.open(settings["mask_path"])
 
-    use_pipeline = True
+    use_pipeline = False
     if use_pipeline:
         pipe = PaintWithWord_StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting")
         pipe = pipe.to("cuda")

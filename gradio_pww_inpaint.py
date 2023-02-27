@@ -5,7 +5,7 @@ import torch
 import ast
 import gradio as gr
 import dotenv
-from paint_with_words import paint_with_words
+from paint_with_words import paint_with_words_inpaint
 
 
 dotenv.load_dotenv()
@@ -87,8 +87,9 @@ def collect_color_content(*color_textbox):
         return ""
 
 
-def run_pww(color_map_image, init_image, color_context, input_prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device, width, height):
+def run_pww(color_map_image, init_image, mask_image, color_context, input_prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device, width, height):
     
+    mask_image = mask_image['image'].convert('L')
     color_map_image = color_map_image.resize((width, height), Image.Resampling.NEAREST)
     if init_image is not None:
         init_image = init_image.resize((width, height), Image.Resampling.BILINEAR)
@@ -104,19 +105,21 @@ def run_pww(color_map_image, init_image, color_context, input_prompt, a_prompt, 
 
     images = []
     for _seed in gen_seed:
-        img = paint_with_words(
+        img = paint_with_words_inpaint(
             color_context=color_context,
             color_map_image=color_map_image,
             init_image=init_image,
+            mask_image=mask_image,
             input_prompt='%s,%s'%(input_prompt,a_prompt),
             unconditional_input_prompt=n_prompt,
             num_inference_steps=ddim_steps,
             guidance_scale=scale,
             device=device,
             seed=_seed,
-            weight_function=lambda w, sigma, qk: 0.4 * w * math.log(1 + sigma) * qk.max(),
-            strength=eta
+            weight_function=lambda w, sigma, qk: 0.15 * w * math.log(1 + sigma) * qk.max(),
+            strength = eta,
         )
+
         images.append(img)
 
     return images
@@ -132,7 +135,7 @@ blank_image.readonly = True
 block = gr.Blocks().queue()
 with block:
     with gr.Row():
-        gr.Markdown("## Paint-with-word")
+        gr.Markdown("## Paint-with-word for Image inpainting")
     with gr.Row():
         with gr.Column():
             color_map_image = gr.Image(label='Segmentation map', source='upload', type='pil', tool='color-sketch')
@@ -146,23 +149,24 @@ with block:
                     generate_color_boxes_button = gr.Button(value="Generate color content")
             color_context = gr.Textbox(label="Color context", value='')
             init_image = gr.Image(label='Initial image', source='upload', type='pil')
+            mask_image = gr.Image(label='Mask image', source='upload', type='pil', tool='sketch')
             device = gr.inputs.Dropdown(label='Device', default='cuda', choices=['cuda', 'mps'])
             run_button = gr.Button(value="Run Paint-with-Word")
             with gr.Accordion("Advanced options", open=False):
                 width = gr.Slider(label="Width", minimum=256, maximum=1024, value=512, step=256)
                 height = gr.Slider(label="Height", minimum=256, maximum=1024, value=512, step=256)
                 num_samples = gr.Slider(label="Images", minimum=1, maximum=12, value=1, step=1)
-                ddim_steps = gr.Slider(label="Steps", minimum=1, maximum=100, value=30, step=1)
+                ddim_steps = gr.Slider(label="Steps", minimum=1, maximum=300, value=150, step=1)
                 scale = gr.Slider(label="Guidance Scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
                 seed = gr.Slider(label="Seed", minimum=-1, maximum=2147483647, step=1, value=0)
-                eta = gr.Number(label="eta (DDIM)", value=0.5)
+                eta = gr.Number(label="eta (DDIM)", value=1.0)
                 a_prompt = gr.Textbox(label="Added Prompt", value='')
                 n_prompt = gr.Textbox(label="Negative Prompt", value='')
         with gr.Column():
             result_gallery = gr.Gallery(label='Output', show_label=False, elem_id="gallery").style(grid=2, height='auto')
     extract_color_boxes_button.click(fn=extract_color_textboxes, inputs=[color_map_image, *color_textbox], outputs=[color_map, *color_textbox])
     generate_color_boxes_button.click(fn=collect_color_content, inputs=[*color_textbox], outputs=[color_context])
-    ips = [color_map_image, init_image, color_context, prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device, width, height]
+    ips = [color_map_image, init_image, mask_image, color_context, prompt, a_prompt, n_prompt, num_samples, ddim_steps, scale, seed, eta, device, width, height]
     run_button.click(fn=run_pww, inputs=ips, outputs=[result_gallery])   
     
 block.launch(server_name='0.0.0.0')
