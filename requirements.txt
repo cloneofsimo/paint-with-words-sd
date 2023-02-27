@@ -4,4 +4,3 @@ scipy
 ftfy
 python-dotenv
 gradio
-accelerate
