@@ -343,7 +343,7 @@ Click the button "Generate color content" to collect all the contents into "Colo
 
 <!-- #region -->
 <p align="center">
-<img  src="contents/gradio_color_content_demo_0.png">
+<img  src="contents/gradio_color_content_demo.png">
 </p>
 <!-- #endregion -->
 
