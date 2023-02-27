@@ -326,8 +326,9 @@ Noting that the "Color context" should follows the format defined as the example
 For example, 
 > {(7, 9, 182): "aurora,0.5,-1",(136, 178, 92): "full moon,1.5,-1",(51, 193, 217): "mountains,0.4,-1",(61, 163, 35): "a half-frozen lake,0.3,-1",(89, 102, 255): "boat,2.0,2077",}
 
-One can expand the "Color content option". 
-Press the button "Extract color content" to extract the unique color of images,
+### Color contenet extraction
+One can extract the color content from "Segmentation map" by expanding the "Color content option". 
+Press the button "Extract color content" to extract the unique color of images.
 
 <!-- #region -->
 <p align="center">
@@ -335,7 +336,7 @@ Press the button "Extract color content" to extract the unique color of images,
 </p>
 <!-- #endregion -->
 
-The textbox will be initialized with "(colors):obj,0.5,-1", where 0.5 are strength of text embedding and -1 is random seed.
+In "Color content option", the extracted colors are shown as the color bar at the top and the textbox for each color will be initialized with "(colors):obj,0.5,-1" respecitvely for each unique color, where 0.5 are strength of text embedding and -1 is random seed.
 One can then replace "obj" with the object appear in the prompt. Importantly, don't use "," in the object, as this is the separator of the color content.
 
 Click the button "Generate color content" to collect all the contents into "Color content" the textbox as the formal input of Paint-with-word.
@@ -346,7 +347,7 @@ Click the button "Generate color content" to collect all the contents into "Colo
 </p>
 <!-- #endregion -->
 
-Same function is supported for Paint-with-word for image inpainting as shown below
+The same function is supported for Paint-with-word for image inpainting as shown below
 
 ## Paint-with-word for image inpainting
 To launch gradio api
