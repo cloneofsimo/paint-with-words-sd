@@ -142,21 +142,18 @@ def paint_with_words_inpaint(
     mask_image: Optional[Image.Image] = None,
     init_image: Image.Image = None,
     input_prompt: str = "",
-    num_inference_steps: int = 30,
+    num_inference_steps: int = 150,
     guidance_scale: float = 7.5,
     seed: int = 0,
     scheduler_type = LMSDiscreteScheduler,
     device: str = "cuda:0",
-    weight_function: Callable = lambda w, sigma, qk: 0.1
-    * w
-    * math.log(sigma + 1)
-    * qk.max(),
+    weight_function: Callable = lambda w, sigma, qk: 0.1 * w * math.log(sigma + 1) * qk.max(),
     local_model_path: Optional[str] = None,
     hf_model_path: Optional[str] = "runwayml/stable-diffusion-inpainting",
     preloaded_utils: Optional[Tuple] = None,
     unconditional_input_prompt: str = "",
     model_token: Optional[str] = None,
-    strength: float = 0.5,
+    strength: float = 1.0,
 ):
 
     vae, unet, text_encoder, tokenizer, scheduler = (

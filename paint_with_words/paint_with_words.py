@@ -124,7 +124,6 @@ def pww_load_tools(
 
     is_mps = device == 'mps'
     dtype = torch.float16 if not is_mps else torch.float32
-    revision = "fp32" if not is_mps else "fp16"
 
     model_path = local_model_path if local_model_path is not None else hf_model_path
     local_path_only = local_model_path is not None
