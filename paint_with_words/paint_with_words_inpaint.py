@@ -117,7 +117,7 @@ def prepare_mask_latents(
     masked_image = masked_image.to(device=device, dtype=dtype)
 
     # encode the mask image into latents space so we can concatenate it to the latents
-    masked_image_latents = vae.encode(masked_image).latent_dist.sample(generator=generator)
+    masked_image_latents = vae.encode(masked_image).latent_dist.sample()
     masked_image_latents = 0.18215 * masked_image_latents
 
     # duplicate mask and masked_image_latents for each generation per prompt, using mps friendly method
@@ -142,21 +142,18 @@ def paint_with_words_inpaint(
     mask_image: Optional[Image.Image] = None,
     init_image: Image.Image = None,
     input_prompt: str = "",
-    num_inference_steps: int = 30,
+    num_inference_steps: int = 150,
     guidance_scale: float = 7.5,
     seed: int = 0,
     scheduler_type = LMSDiscreteScheduler,
     device: str = "cuda:0",
-    weight_function: Callable = lambda w, sigma, qk: 0.1
-    * w
-    * math.log(sigma + 1)
-    * qk.max(),
+    weight_function: Callable = lambda w, sigma, qk: 0.1 * w * math.log(sigma + 1) * qk.max(),
     local_model_path: Optional[str] = None,
     hf_model_path: Optional[str] = "runwayml/stable-diffusion-inpainting",
     preloaded_utils: Optional[Tuple] = None,
     unconditional_input_prompt: str = "",
     model_token: Optional[str] = None,
-    strength: float = 0.5,
+    strength: float = 1.0,
 ):
 
     vae, unet, text_encoder, tokenizer, scheduler = (
@@ -187,15 +184,13 @@ def paint_with_words_inpaint(
     latent_timestep = timesteps[:1]
 
     # Latent
-    generator = torch.Generator(device=device)
-    generator.manual_seed(seed)
-    generator_cpu = torch.manual_seed(seed)
+    generator = torch.manual_seed(seed)
     init_image = preprocess(init_image)
     image = init_image.to(device=device)
     init_latent_dist = vae.encode(image).latent_dist
-    init_latents = init_latent_dist.sample(generator=generator)
+    init_latents = init_latent_dist.sample()
     init_latents = 0.18215 * init_latents
-    noise = torch.randn(init_latents.shape, generator=generator_cpu).to(device)
+    noise = torch.randn(init_latents.shape, generator=generator).to(device)
     init_latents = scheduler.add_noise(init_latents, noise, latent_timestep)
     latents = init_latents
 
@@ -320,7 +315,7 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
         masked_image = masked_image.to(device=device, dtype=dtype)
 
         # encode the mask image into latents space so we can concatenate it to the latents
-        masked_image_latents = self.vae.encode(masked_image).latent_dist.sample(generator=generator)
+        masked_image_latents = self.vae.encode(masked_image).latent_dist.sample()
         masked_image_latents = 0.18215 * masked_image_latents
 
         # duplicate mask and masked_image_latents for each generation per prompt, using mps friendly method
@@ -337,6 +332,7 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
         return mask, masked_image_latents
 
     @torch.no_grad()
+    @torch.autocast("cuda")
     def __call__(
         self,
         prompt: Union[str, List[str]],
@@ -471,15 +467,15 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
         #     latents,
         # )
         # Latent
-        generator = torch.Generator(device=device)
-        generator.manual_seed(seed)
-        generator_cpu = torch.manual_seed(seed)
+        # generator = torch.Generator(device=device)
+        # generator.manual_seed(seed)
+        generator = torch.manual_seed(seed)
         image = preprocess(image)
         image = image.to(device=device)
         init_latent_dist = self.vae.encode(image).latent_dist
-        init_latents = init_latent_dist.sample(generator=generator)
+        init_latents = init_latent_dist.sample().to(device)
         init_latents = 0.18215 * init_latents
-        noise = torch.randn(init_latents.shape, generator=generator_cpu).to(device)
+        noise = torch.randn(init_latents.shape, generator=generator).to(device)
         init_latents = self.scheduler.add_noise(init_latents, noise, latent_timestep)
         latents = init_latents
 

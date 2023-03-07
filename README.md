@@ -336,8 +336,7 @@ Press the button "Extract color content" to extract the unique color of images.
 </p>
 <!-- #endregion -->
 
-In "Color content option", the extracted colors are shown as the color bar at the top and the textbox for each color will be initialized with "(colors):obj,0.5,-1" respecitvely for each unique color, where 0.5 are strength of text embedding and -1 is random seed.
-One can then replace "obj" with the object appear in the prompt. Importantly, don't use "," in the object, as this is the separator of the color content.
+In "Color content option", the extracted colors are shown respectively for each item. One can then replace "obj" with the object appear in the prompt. Importantly, don't use "," in the object, as this is the separator of the color content.
 
 Click the button "Generate color content" to collect all the contents into "Color content" the textbox as the formal input of Paint-with-word.
 
