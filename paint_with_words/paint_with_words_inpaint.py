@@ -187,15 +187,13 @@ def paint_with_words_inpaint(
     latent_timestep = timesteps[:1]
 
     # Latent
-    generator = torch.Generator(device=device)
-    generator.manual_seed(seed)
-    generator_cpu = torch.manual_seed(seed)
+    generator = torch.manual_seed(seed)
     init_image = preprocess(init_image)
     image = init_image.to(device=device)
     init_latent_dist = vae.encode(image).latent_dist
-    init_latents = init_latent_dist.sample(generator=generator)
+    init_latents = init_latent_dist.sample()
     init_latents = 0.18215 * init_latents
-    noise = torch.randn(init_latents.shape, generator=generator_cpu).to(device)
+    noise = torch.randn(init_latents.shape, generator=generator).to(device)
     init_latents = scheduler.add_noise(init_latents, noise, latent_timestep)
     latents = init_latents
 
@@ -472,15 +470,15 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
         #     latents,
         # )
         # Latent
-        generator = torch.Generator(device=device)
-        generator.manual_seed(seed)
-        generator_cpu = torch.manual_seed(seed)
+        # generator = torch.Generator(device=device)
+        # generator.manual_seed(seed)
+        generator = torch.manual_seed(seed)
         image = preprocess(image)
         image = image.to(device=device)
         init_latent_dist = self.vae.encode(image).latent_dist
-        init_latents = init_latent_dist.sample(generator=generator).to(device)
+        init_latents = init_latent_dist.sample().to(device)
         init_latents = 0.18215 * init_latents
-        noise = torch.randn(init_latents.shape, generator=generator_cpu).to(device)
+        noise = torch.randn(init_latents.shape, generator=generator).to(device)
         init_latents = self.scheduler.add_noise(init_latents, noise, latent_timestep)
         latents = init_latents
 
