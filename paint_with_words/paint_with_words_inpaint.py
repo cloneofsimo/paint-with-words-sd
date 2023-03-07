@@ -337,6 +337,7 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
         return mask, masked_image_latents
 
     @torch.no_grad()
+    @torch.autocast("cuda")
     def __call__(
         self,
         prompt: Union[str, List[str]],
@@ -477,7 +478,7 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
         image = preprocess(image)
         image = image.to(device=device)
         init_latent_dist = self.vae.encode(image).latent_dist
-        init_latents = init_latent_dist.sample(generator=generator)
+        init_latents = init_latent_dist.sample(generator=generator).to(device)
         init_latents = 0.18215 * init_latents
         noise = torch.randn(init_latents.shape, generator=generator_cpu).to(device)
         init_latents = self.scheduler.add_noise(init_latents, noise, latent_timestep)

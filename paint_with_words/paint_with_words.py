@@ -46,6 +46,7 @@ def _pil_from_latents(vae, latents):
     return ret_pil_images
 
 
+@torch.autocast("cuda")
 def inj_forward(self, hidden_states, context=None, mask=None):
 
     is_dict_format = True
@@ -123,6 +124,7 @@ def pww_load_tools(
 
     is_mps = device == 'mps'
     dtype = torch.float16 if not is_mps else torch.float32
+
     model_path = local_model_path if local_model_path is not None else hf_model_path
     local_path_only = local_model_path is not None
     print(model_path)
@@ -132,6 +134,7 @@ def pww_load_tools(
         use_auth_token=model_token,
         torch_dtype=dtype,
         local_files_only=local_path_only,
+        revision="fp16",
     )
 
     tokenizer = CLIPTokenizer.from_pretrained(model_path, subfolder="tokenizer")
@@ -143,6 +146,7 @@ def pww_load_tools(
         use_auth_token=model_token,
         torch_dtype=dtype,
         local_files_only=local_path_only,
+        revision="fp16",
     )
 
     vae.to(device), unet.to(device), text_encoder.to(device)
@@ -573,6 +577,7 @@ class PaintWithWord_StableDiffusionPipeline(StableDiffusionPipeline):
         return extra_seeds, cond_embeddings.dtype, separated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states
 
     @torch.no_grad()
+    @torch.autocast("cuda")
     def __call__(
         self,
         prompt: Union[str, List[str]],

@@ -49,9 +49,13 @@ if __name__ == "__main__":
     init_image = Image.open(settings["img_path"]).convert("RGB")
     mask_image = Image.open(settings["mask_path"])
 
-    use_pipeline = False
+    use_pipeline = True
     if use_pipeline:
-        pipe = PaintWithWord_StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting")
+        pipe = PaintWithWord_StableDiffusionInpaintPipeline.from_pretrained(
+            "runwayml/stable-diffusion-inpainting",
+            revision="fp16",
+            torch_dtype=torch.float16
+        )
         pipe = pipe.to("cuda")
         generator = torch.Generator(device="cuda")
         generator.manual_seed(81)
