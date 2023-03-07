@@ -49,7 +49,7 @@ if __name__ == "__main__":
     init_image = Image.open(settings["img_path"]).convert("RGB")
     mask_image = Image.open(settings["mask_path"])
 
-    use_pipeline = False
+    use_pipeline = True
     if use_pipeline:
         # CUDA
         pipe = PaintWithWord_StableDiffusionInpaintPipeline.from_pretrained(
@@ -58,17 +58,8 @@ if __name__ == "__main__":
             torch_dtype=torch.float16,
         )
         pipe = pipe.to("cuda")
-
-        # MPS: this is availible in CPU dues to the backend
-        # pipe = PaintWithWord_StableDiffusionInpaintPipeline.from_pretrained(
-        #     "runwayml/stable-diffusion-inpainting",
-        #     torch_dtype=torch.float32,
-        # )
-        # pipe = pipe.to("mps")
-
-        # generator = torch.Generator(device="cuda")
-        # generator.manual_seed(81)
-        generator = torch.manual_seed(81)
+        generator = torch.Generator(device="cuda")
+        generator.manual_seed(81)
         img = pipe(
                 prompt=input_prompt,
                 image=init_image,
@@ -91,8 +82,7 @@ if __name__ == "__main__":
             input_prompt=input_prompt,
             num_inference_steps=150,
             guidance_scale=7.5,
-            # device="cuda:0",
-            device="mps",
+            device="cuda:0",
             seed=81,
             weight_function=lambda w, sigma, qk: 0.15 * w * math.log(1 + sigma) * qk.max(),
             strength = 1.0,

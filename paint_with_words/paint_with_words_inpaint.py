@@ -117,7 +117,7 @@ def prepare_mask_latents(
     masked_image = masked_image.to(device=device, dtype=dtype)
 
     # encode the mask image into latents space so we can concatenate it to the latents
-    masked_image_latents = vae.encode(masked_image).latent_dist.sample(generator=generator)
+    masked_image_latents = vae.encode(masked_image).latent_dist.sample()
     masked_image_latents = 0.18215 * masked_image_latents
 
     # duplicate mask and masked_image_latents for each generation per prompt, using mps friendly method
@@ -315,7 +315,7 @@ class PaintWithWord_StableDiffusionInpaintPipeline(PaintWithWord_StableDiffusion
         masked_image = masked_image.to(device=device, dtype=dtype)
 
         # encode the mask image into latents space so we can concatenate it to the latents
-        masked_image_latents = self.vae.encode(masked_image).latent_dist.sample(generator=generator)
+        masked_image_latents = self.vae.encode(masked_image).latent_dist.sample()
         masked_image_latents = 0.18215 * masked_image_latents
 
         # duplicate mask and masked_image_latents for each generation per prompt, using mps friendly method
