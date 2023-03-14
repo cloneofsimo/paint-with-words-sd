@@ -169,6 +169,9 @@ def paint_with_words_inpaint(
     )
 
     width, height = init_image.size
+    color_map_image = color_map_image.resize((width, height))
+    mask_image = mask_image.resize((width, height))
+    
     _, _, encoder_hidden_states, uncond_encoder_hidden_states = \
         _encode_text_color_inputs(text_encoder, tokenizer, device, color_map_image, color_context, input_prompt, unconditional_input_prompt)
 

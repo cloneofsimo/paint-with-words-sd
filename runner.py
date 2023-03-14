@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     settings = EXAMPLE_SETTING_4_seed
 
-    color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB").resize([512,512])
+    color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB")
     color_context = settings["color_context"]
     input_prompt = settings["input_prompt"]
     

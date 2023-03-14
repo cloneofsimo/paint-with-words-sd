@@ -35,11 +35,11 @@ def preprocess(image):
     return 2.0 * image - 1.0
 
 
-def _img_importance_flatten(img: torch.tensor, h: int, w: int) -> torch.tensor:
+def _img_importance_flatten(img: torch.tensor, w: int, h: int) -> torch.tensor:
     return F.interpolate(
         img.unsqueeze(0).unsqueeze(1),
         # scale_factor=1 / ratio,
-        size=(h, w),
+        size=(w, h),
         mode="bilinear",
         align_corners=True,
     ).squeeze()
@@ -262,7 +262,7 @@ def _tokens_img_attention_weight(
 
                 # print(token_lis[idx : idx + len(v_as_tokens)], v_as_tokens)
                 ret_tensor[:, idx : idx + len(v_as_tokens)] += (
-                    _img_importance_flatten(img_where_color, h_r, w_r)
+                    _img_importance_flatten(img_where_color, w_r, h_r)
                     .reshape(-1, 1)
                     .repeat(1, len(v_as_tokens))
                 )
@@ -271,7 +271,7 @@ def _tokens_img_attention_weight(
             print(f"Warning ratio {ratio} : tokens {v_as_tokens} not found in text")
 
     if original_shape:
-        ret_tensor = ret_tensor.reshape((h_r, w_r, len(token_lis)))
+        ret_tensor = ret_tensor.reshape((w_r, h_r, len(token_lis)))
 
     return ret_tensor
 
@@ -579,6 +579,9 @@ class PaintWithWord_StableDiffusionPipeline(StableDiffusionPipeline):
         )
 
         # Compute cross-attention weights
+        cross_attention_weight_1 = _tokens_img_attention_weight(
+            separated_word_contexts, text_input, ratio=1, original_shape=True
+        ).to(device)
         cross_attention_weight_8 = _tokens_img_attention_weight(
             separated_word_contexts, text_input, ratio=8
         ).to(device)
@@ -605,18 +608,20 @@ class PaintWithWord_StableDiffusionPipeline(StableDiffusionPipeline):
 
         encoder_hidden_states = {
             "CONTEXT_TENSOR": cond_embeddings,
-            f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": cross_attention_weight_8,
-            f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": cross_attention_weight_16,
-            f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
-            f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
+            f"CROSS_ATTENTION_WEIGHT_ORIG": cross_attention_weight_1,
+            f"CROSS_ATTENTION_WEIGHT_{always_round(height/8)*always_round(width/8)}": cross_attention_weight_8,
+            f"CROSS_ATTENTION_WEIGHT_{always_round(height/16)*always_round(width/16)}": cross_attention_weight_16,
+            f"CROSS_ATTENTION_WEIGHT_{always_round(height/32)*always_round(width/32)}": cross_attention_weight_32,
+            f"CROSS_ATTENTION_WEIGHT_{always_round(height/64)*always_round(width/64)}": cross_attention_weight_64,
         }
 
         uncond_encoder_hidden_states = {
             "CONTEXT_TENSOR": uncond_embeddings,
-            f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": 0,
-            f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": 0,
-            f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": 0,
-            f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": 0,
+            f"CROSS_ATTENTION_WEIGHT_ORIG": 0,
+            f"CROSS_ATTENTION_WEIGHT_{always_round(height/8)*always_round(width/8)}": 0,
+            f"CROSS_ATTENTION_WEIGHT_{always_round(height/16)*always_round(width/16)}": 0,
+            f"CROSS_ATTENTION_WEIGHT_{always_round(height/32)*always_round(width/32)}": 0,
+            f"CROSS_ATTENTION_WEIGHT_{always_round(height/64)*always_round(width/64)}": 0,
         }
 
         return extra_seeds, cond_embeddings.dtype, separated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states
