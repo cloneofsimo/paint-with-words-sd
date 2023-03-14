@@ -78,11 +78,11 @@ if __name__ == "__main__":
 
     settings = EXAMPLE_SETTING_4_seed
 
-    color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB")
+    color_map_image = Image.open(settings["color_map_img_path"]).convert("RGB").resize([512,512])
     color_context = settings["color_context"]
     input_prompt = settings["input_prompt"]
     
-    use_pipeline = True
+    use_pipeline = False
     if use_pipeline:
         pipe = PaintWithWord_StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
         pipe = pipe.to("cuda")

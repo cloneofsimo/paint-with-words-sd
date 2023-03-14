@@ -15,6 +15,16 @@ from diffusers import StableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipelineOutput
 
 
+def always_round(x):
+    intx = int(x)
+    is_even = intx%2 == 0
+    if is_even:
+        if x < intx + 0.5:
+            return intx
+        return intx + 1
+    else:
+        return round(x)
+
 def preprocess(image):
     w, h = image.size
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
@@ -25,10 +35,11 @@ def preprocess(image):
     return 2.0 * image - 1.0
 
 
-def _img_importance_flatten(img: torch.tensor, ratio: int) -> torch.tensor:
+def _img_importance_flatten(img: torch.tensor, h: int, w: int) -> torch.tensor:
     return F.interpolate(
         img.unsqueeze(0).unsqueeze(1),
-        scale_factor=1 / ratio,
+        # scale_factor=1 / ratio,
+        size=(h, w),
         mode="bilinear",
         align_corners=True,
     ).squeeze()
@@ -79,7 +90,17 @@ def inj_forward(self, hidden_states, context=None, mask=None):
     if context is not None:
         if is_dict_format:
             f: Callable = context["WEIGHT_FUNCTION"]
-            w = context[f"CROSS_ATTENTION_WEIGHT_{attention_size_of_img}"]
+            try:
+                w = context[f"CROSS_ATTENTION_WEIGHT_{attention_size_of_img}"]
+            except KeyError:
+                w = context[f"CROSS_ATTENTION_WEIGHT_ORIG"]
+                if not isinstance(w, int):
+                    img_h, img_w, nc = w.shape
+                    ratio = math.sqrt(img_h * img_w / attention_size_of_img)
+                    w = F.interpolate(w.permute(2, 0, 1).unsqueeze(0), scale_factor=1/ratio, mode="bilinear", align_corners=True)
+                    w = F.interpolate(w.reshape(1, nc, -1), size=(attention_size_of_img,), mode='nearest').permute(2, 1, 0).squeeze()
+                else:
+                    w = 0
             sigma = context["SIGMA"]
 
             cross_attention_weight = f(w, sigma, attention_scores)
@@ -191,8 +212,8 @@ def _image_context_seperator(
 
     if img is not None:
         w, h = img.size
-        w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
-        img = img.resize((w, h), resample=PIL.Image.LANCZOS)
+        # w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
+        # img = img.resize((w, h), resample=PIL.Image.LANCZOS)
 
         for color, v in color_context.items():
             f = v.split(",")[-1]
@@ -207,7 +228,6 @@ def _image_context_seperator(
             if isinstance(color, str):
                 r, g, b = color[1:3], color[3:5], color[5:7]
                 color = (int(r, 16), int(g, 16), int(b, 16))
-
             img_where_color = (np.array(img) == color).all(axis=-1)
 
             if not img_where_color.sum() > 0:
@@ -225,14 +245,13 @@ def _image_context_seperator(
 
 
 def _tokens_img_attention_weight(
-    img_context_seperated, tokenized_texts, ratio: int = 8
+    img_context_seperated, tokenized_texts, ratio: int = 8, original_shape=False
 ):
     
     token_lis = tokenized_texts["input_ids"][0].tolist()
     w, h = img_context_seperated[0][1].shape
 
-    w_r, h_r = w // ratio, h // ratio
-
+    w_r, h_r = always_round(w/ratio), always_round(h/ratio)
     ret_tensor = torch.zeros((w_r * h_r, len(token_lis)), dtype=torch.float32)
     
     for v_as_tokens, img_where_color in img_context_seperated:
@@ -243,13 +262,16 @@ def _tokens_img_attention_weight(
 
                 # print(token_lis[idx : idx + len(v_as_tokens)], v_as_tokens)
                 ret_tensor[:, idx : idx + len(v_as_tokens)] += (
-                    _img_importance_flatten(img_where_color, ratio)
+                    _img_importance_flatten(img_where_color, h_r, w_r)
                     .reshape(-1, 1)
                     .repeat(1, len(v_as_tokens))
                 )
 
         if not is_in == 1:
             print(f"Warning ratio {ratio} : tokens {v_as_tokens} not found in text")
+
+    if original_shape:
+        ret_tensor = ret_tensor.reshape((h_r, w_r, len(token_lis)))
 
     return ret_tensor
 
@@ -318,6 +340,9 @@ def _encode_text_color_inputs(
         seperated_word_contexts = _blur_image_mask(seperated_word_contexts, extra_sigmas)
     
     # Compute cross-attention weights
+    cross_attention_weight_1 = _tokens_img_attention_weight(
+        seperated_word_contexts, text_input, ratio=1, original_shape=True
+    ).to(device)
     cross_attention_weight_8 = _tokens_img_attention_weight(
         seperated_word_contexts, text_input, ratio=8
     ).to(device)
@@ -344,18 +369,20 @@ def _encode_text_color_inputs(
 
     encoder_hidden_states = {
         "CONTEXT_TENSOR": cond_embeddings,
-        f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": cross_attention_weight_8,
-        f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": cross_attention_weight_16,
-        f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": cross_attention_weight_32,
-        f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": cross_attention_weight_64,
+        f"CROSS_ATTENTION_WEIGHT_ORIG": cross_attention_weight_1,
+        f"CROSS_ATTENTION_WEIGHT_{always_round(height/8)*always_round(width/8)}": cross_attention_weight_8,
+        f"CROSS_ATTENTION_WEIGHT_{always_round(height/16)*always_round(width/16)}": cross_attention_weight_16,
+        f"CROSS_ATTENTION_WEIGHT_{always_round(height/32)*always_round(width/32)}": cross_attention_weight_32,
+        f"CROSS_ATTENTION_WEIGHT_{always_round(height/64)*always_round(width/64)}": cross_attention_weight_64,
     }
 
     uncond_encoder_hidden_states = {
         "CONTEXT_TENSOR": uncond_embeddings,
-        f"CROSS_ATTENTION_WEIGHT_{height * width // (8 * 8)}": 0,
-        f"CROSS_ATTENTION_WEIGHT_{height * width // (16 * 16)}": 0,
-        f"CROSS_ATTENTION_WEIGHT_{height * width // (32 * 32)}": 0,
-        f"CROSS_ATTENTION_WEIGHT_{height * width // (64 * 64)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_ORIG": 0,
+        f"CROSS_ATTENTION_WEIGHT_{always_round(height/8)*always_round(width/8)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_{always_round(height/16)*always_round(width/16)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_{always_round(height/32)*always_round(width/32)}": 0,
+        f"CROSS_ATTENTION_WEIGHT_{always_round(height/64)*always_round(width/64)}": 0,
     }
 
     return extra_seeds, seperated_word_contexts, encoder_hidden_states, uncond_encoder_hidden_states
