@@ -91,8 +91,8 @@ if __name__ == '__main__':
                                         seeds.append(gr.Textbox(label="Random Seed", interactive=True))
                             
                 with gr.Accordion("Advanced options", open=False):
-                    width = gr.Slider(label="Width", minimum=256, maximum=1024, value=512, step=256)
-                    height = gr.Slider(label="Height", minimum=256, maximum=1024, value=512, step=256)
+                    width = gr.Slider(label="Width", minimum=256, maximum=1024, value=512, step=1)
+                    height = gr.Slider(label="Height", minimum=256, maximum=1024, value=512, step=1)
                     num_samples = gr.Slider(label="Images", minimum=1, maximum=12, value=1, step=1)
                     ddim_steps = gr.Slider(label="Steps", minimum=1, maximum=300, value=150, step=1)
                     scale = gr.Slider(label="Guidance Scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
