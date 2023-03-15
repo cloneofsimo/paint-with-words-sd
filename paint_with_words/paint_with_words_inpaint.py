@@ -169,8 +169,8 @@ def paint_with_words_inpaint(
     )
 
     width, height = init_image.size
-    color_map_image = color_map_image.resize((width, height))
-    mask_image = mask_image.resize((width, height))
+    color_map_image = color_map_image.resize((width, height), Image.NEAREST)
+    mask_image = mask_image.resize((width, height), Image.NEAREST)
     
     _, _, encoder_hidden_states, uncond_encoder_hidden_states = \
         _encode_text_color_inputs(text_encoder, tokenizer, device, color_map_image, color_context, input_prompt, unconditional_input_prompt)
@@ -210,7 +210,9 @@ def paint_with_words_inpaint(
         generator=generator,
         do_classifier_free_guidance=False,
     )
-
+    mask = F.interpolate(mask, size=latents.shape[-2:], mode='nearest')
+    masked_image_latents = F.interpolate(masked_image_latents, size=latents.shape[-2:], mode='nearest')
+    
     # Check that sizes of mask, masked image and latents match
     num_channels_latents = latents.shape[1]
     num_channels_mask = mask.shape[1]
@@ -231,6 +233,7 @@ def paint_with_words_inpaint(
         sigma = scheduler.sigmas[step_index]
 
         latent_model_input = scheduler.scale_model_input(latents, t)
+        
         latent_model_input = torch.cat([latent_model_input, mask, masked_image_latents], dim=1)
         _t = t if not is_mps else t.float()
         encoder_hidden_states.update({
