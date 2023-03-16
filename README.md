@@ -362,6 +362,33 @@ python gradio_pww_inpaint.py
 <!-- #endregion -->
 
 
+# Extension for [AUTOMATIC1111(A1111) stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+
+Demo:
+
+![screencapture-127-0-0-1-7860-2023-03-13-10_56_34](https://user-images.githubusercontent.com/42672685/225545442-bdb481ec-e234-475e-900d-e9340c0c7deb.png)
+
+## Installation
+
+one can clone the 'pww_controlnet" directory into the extensions directory of A1111 webui
+
+```bash
+cp -rf pww_controlnet path/stable-diffusion-webui/extensions/
+```
+
+or simply
+
+```bash
+cd path/stable-diffusion-webui/extensions/
+git clone git@github.com:lwchen6309/sd-webui-controlnet-pww.git
+```
+
+where path is the path of A1111 webui.
+
+
+
+
+
 # TODO
 
 - [ ] Make extensive comparisons for different weight scaling functions.
