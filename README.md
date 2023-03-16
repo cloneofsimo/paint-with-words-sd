@@ -364,7 +364,7 @@ python gradio_pww_inpaint.py
 
 # Paint with Word (PwW) + ControlNet Extension for [AUTOMATIC1111(A1111) stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 
-This extension comebines Control Net and Paint with Word to provide additional PwW control to ControlNet.
+This extension provide additional PwW control to ControlNet.
 
 The demo is shown below.
 
