@@ -364,11 +364,21 @@ python gradio_pww_inpaint.py
 
 # Extension for [AUTOMATIC1111(A1111) stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 
-This is extension comebines Control Net and Paint with Word, as the demo shown below.
+This is extension comebines Control Net and Paint with Word to provide additional PwW control to ControlNet.
+
+The demo is shown below.
 
 ![screencapture-127-0-0-1-7860-2023-03-13-10_56_34](https://user-images.githubusercontent.com/42672685/225545442-bdb481ec-e234-475e-900d-e9340c0c7deb.png)
 
 The implementation is based on the great [A1111 extension of controlnet](https://github.com/Mikubill/sd-webui-controlnet)
+
+## Preparing color content
+
+Similar to the ui of PwW, one can prepare the color content by first clicking "Extract color content" then "Generate olor content"
+
+![screencapture-127-0-0-1-7860-2023-03-16-15_43_25](https://user-images.githubusercontent.com/42672685/225548893-b1610bfa-2777-47b8-afdd-e2aa7fadae4a.png)
+
+In this extension, the regional-based seeding is not enables, thus the random seed for each object will not be retrieved (just leave it as -1).
 
 ## Installation
 
@@ -386,6 +396,11 @@ git clone git@github.com:lwchen6309/sd-webui-controlnet-pww.git
 ```
 
 where path is the path of A1111 webui.
+
+## Raising issues
+
+Please raise isssues at [here](https://github.com/lwchen6309/sd-webui-controlnet-pww) if you encounter any bug of this extension.
+
 
 
 # TODO
