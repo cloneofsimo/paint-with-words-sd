@@ -364,13 +364,15 @@ python gradio_pww_inpaint.py
 
 # Extension for [AUTOMATIC1111(A1111) stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 
-Demo:
+This is extension comebines Control Net and Paint with Word, as the demo shown below.
 
 ![screencapture-127-0-0-1-7860-2023-03-13-10_56_34](https://user-images.githubusercontent.com/42672685/225545442-bdb481ec-e234-475e-900d-e9340c0c7deb.png)
 
+The implementation is based on the great [A1111 extension of controlnet](https://github.com/Mikubill/sd-webui-controlnet)
+
 ## Installation
 
-one can clone the 'pww_controlnet" directory into the extensions directory of A1111 webui
+one can install by cloning the 'pww_controlnet" directory into the extensions directory of A1111 webui
 
 ```bash
 cp -rf pww_controlnet path/stable-diffusion-webui/extensions/
@@ -384,9 +386,6 @@ git clone git@github.com:lwchen6309/sd-webui-controlnet-pww.git
 ```
 
 where path is the path of A1111 webui.
-
-
-
 
 
 # TODO
@@ -408,3 +407,5 @@ where path is the path of A1111 webui.
 
 # Acknowledgement
 Thanks for the inspiring gradio interface from [ControlNet](https://github.com/lllyasviel/ControlNet)
+
+Thanks for the wonderful [A1111 extension of controlnet](https://github.com/Mikubill/sd-webui-controlnet) as the baseline of our implementation
