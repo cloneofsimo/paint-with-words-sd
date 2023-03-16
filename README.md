@@ -370,7 +370,10 @@ The demo is shown below.
 
 ![screencapture-127-0-0-1-7860-2023-03-13-10_56_34](https://user-images.githubusercontent.com/42672685/225545442-bdb481ec-e234-475e-900d-e9340c0c7deb.png)
 
-The implementation is based on the great [A1111 extension of controlnet](https://github.com/Mikubill/sd-webui-controlnet)
+The implementation is based on the great [controlnet extension for A1111](https://github.com/Mikubill/sd-webui-controlnet)
+
+## Examples
+TBD
 
 ## Preparing color content
 
@@ -382,6 +385,7 @@ In this extension, the regional-based seeding is not enables, thus the random se
 
 ## Installation
 
+### (1) Clone the source code to A1111 webui extensions
 one can install by cloning the 'pww_controlnet" directory into the extensions directory of A1111 webui
 
 ```bash
@@ -397,7 +401,8 @@ git clone git@github.com:lwchen6309/sd-webui-controlnet-pww.git
 
 where path is the location of A1111 webui.
 
-Please follow the instruction of [A1111 extension of controlnet](https://github.com/Mikubill/sd-webui-controlnet) to get pretrained models. 
+### (2) Setup pretrained model of ControlNet
+Please follow the instruction of [controlnet extension](https://github.com/Mikubill/sd-webui-controlnet) to get the pretrained models. 
 
 ## Raising issues
 
@@ -409,7 +414,7 @@ Please raise isssues at [here](https://github.com/lwchen6309/sd-webui-controlnet
 - [ ] Make extensive comparisons for different weight scaling functions.
 - [ ] Create word latent-based cross-attention generations.
 - [ ] Check if statement "making background weight smaller is better" is justifiable, by using some standard metrics
-- [ ] Create AUTOMATIC1111's interface
+- [x] Create AUTOMATIC1111's interface
 - [x] Create Gradio interface
 - [x] Create tutorial
 - [ ] See if starting with some "known image latent" is helpful. If it is, we might as well hard-code some initial latent.
