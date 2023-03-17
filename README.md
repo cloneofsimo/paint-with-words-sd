@@ -389,6 +389,8 @@ Note that there are additional prompt: "its texture and grain need to be particu
 > Prompt: "A turtle with a shell made of cake and chocolate material, its texture and grain need to be particularly emphasized."
 > Color content: "{(255, 255, 255):",0.5,-1",(89, 102, 255):"cake,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"chocolate,1.0,-1"}"
 
+with random seed: 0, and weight function scale: 0.3
+
 
 ## Preparing color content
 
