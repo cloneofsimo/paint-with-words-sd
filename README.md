@@ -373,7 +373,22 @@ The demo is shown below.
 The implementation is based on the great [controlnet extension for A1111](https://github.com/Mikubill/sd-webui-controlnet)
 
 ## Examples
-TBD
+
+The results of ControlNet+PwW are shown below. The left block shows the results of using only ControlNet while the right block shows those of ControlNet+PwW. Noting that the material of turtle shell specified by PwW is significantly improved showns in the right blocks.
+
+![pww_material 001](https://user-images.githubusercontent.com/42672685/225926958-42cf4d77-62c1-43c3-9cad-90763f571cba.jpeg)
+
+Note that there are additional prompt: "its texture and grain need to be particularly emphasized." for these examples. Making the full prompts and color content shown as follows
+
+> Prompt: "A turtle with a shell made of metal and beechwood material, its texture and grain need to be particularly emphasized."
+> Color content: "{(255, 255, 255):",0.5,-1",(89, 102, 255):"beechwood,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"metal,1.0,-1"}"
+
+> Prompt: "A turtle with a shell made of wool and beechwood material, its texture and grain need to be particularly emphasized."
+> Color content: "{(255, 255, 255):",0.5,-1",(89, 102, 255):"wool,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"beechwood,1.0,-1"}"
+
+> Prompt: "A turtle with a shell made of cake and chocolate material, its texture and grain need to be particularly emphasized."
+> Color content: "{(255, 255, 255):",0.5,-1",(89, 102, 255):"cake,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"chocolate,1.0,-1"}"
+
 
 ## Preparing color content
 
