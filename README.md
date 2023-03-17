@@ -378,16 +378,21 @@ The results of ControlNet+PwW are shown below. The left block shows the results 
 
 ![pww_material 001](https://user-images.githubusercontent.com/42672685/225926958-42cf4d77-62c1-43c3-9cad-90763f571cba.jpeg)
 
-Note that there are additional prompt: "its texture and grain need to be particularly emphasized." for these examples. Making the full prompts and color content shown as follows
+Note that there are additional prompt: "its texture and grain need to be particularly emphasized." for these examples. Making the full prompts and color content shown as follows for the 3 cases respectively.
 
-> Prompt: "A turtle with a shell made of metal and beechwood material, its texture and grain need to be particularly emphasized."
-> Color content: "{(255, 255, 255):",0.5,-1",(89, 102, 255):"beechwood,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"metal,1.0,-1"}"
+> "A turtle with a shell made of metal and beechwood material, its texture and grain need to be particularly emphasized."
 
-> Prompt: "A turtle with a shell made of wool and beechwood material, its texture and grain need to be particularly emphasized."
-> Color content: "{(255, 255, 255):",0.5,-1",(89, 102, 255):"wool,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"beechwood,1.0,-1"}"
+> "A turtle with a shell made of wool and beechwood material, its texture and grain need to be particularly emphasized."
 
-> Prompt: "A turtle with a shell made of cake and chocolate material, its texture and grain need to be particularly emphasized."
-> Color content: "{(255, 255, 255):",0.5,-1",(89, 102, 255):"cake,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"chocolate,1.0,-1"}"
+> "A turtle with a shell made of cake and chocolate material, its texture and grain need to be particularly emphasized."
+
+Color content: 
+
+>"{(255, 255, 255):",0.5,-1",(89, 102, 255):"beechwood,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"metal,1.0,-1"}"
+
+> "{(255, 255, 255):",0.5,-1",(89, 102, 255):"wool,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"beechwood,1.0,-1"}"
+
+> "{(255, 255, 255):",0.5,-1",(89, 102, 255):"cake,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"chocolate,1.0,-1"}"
 
 with random seed: 0, and weight function scale: 0.3
 
