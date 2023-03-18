@@ -1,0 +1,3 @@
+[submodule "pww_controlnet"]
+	path = pww_controlnet
+	url = git@github.com:lwchen6309/sd-webui-controlnet-pww.git
