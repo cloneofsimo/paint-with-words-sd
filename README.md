@@ -389,8 +389,8 @@ The setups are detailed as follows
 Scribble and Segmentation map:
 
 <p float="middle">
-  <img src="contents/cn_pww/user1.png" width="300" />
-  <img src="contents/cn_pww/seg_map1.png" width="300" /> 
+  <img src="contents/cn_pww/user1.png" width="200" />
+  <img src="contents/cn_pww/seg_map1.png" width="200" /> 
 </p>
 
 Prompts:
@@ -403,7 +403,7 @@ Color contents:
 
 ## Assign the material for the specific region in scribble
 
-The figure below show the comparison between ControlNet and ControlNet+PwW. The left block shows the results of using only ControlNet while the right block shows those of ControlNet+PwW. Noting that the material of turtle shell specified by PwW is significantly improved showns in the right blocks.
+The figure below show the comparison between ControlNet and ControlNet+PwW. The left block shows the results of using only ControlNet while the right block shows those of ControlNet+PwW. 
 
 <!-- #region -->
 <p align="center">
@@ -411,16 +411,18 @@ The figure below show the comparison between ControlNet and ControlNet+PwW. The 
 </p>
 <!-- #endregion -->
 
-Note that there are additional prompt: "its texture and grain need to be particularly emphasized." for these examples. Making the full prompts and color content shown as follows for the 3 cases respectively.
+Noting that the material of turtle shell specified by PwW is significantly improved showns in the right blocks.
 
 The setups are detailed as follows:
 
 Scribble and Segmentation map:
 
 <p float="middle">
-  <img src="contents/cn_pww/user2.png" width="300" />
-  <img src="contents/cn_pww/seg_map2.png" width="300" /> 
+  <img src="contents/cn_pww/user2.png" width="200" />
+  <img src="contents/cn_pww/seg_map2.png" width="200" /> 
 </p>
+
+Note that there are additional prompt: "its texture and grain need to be particularly emphasized." for these examples. Making the full prompts and color content shown as follows for the 3 cases respectively.
 
 Prompts:
 
