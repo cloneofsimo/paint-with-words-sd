@@ -372,13 +372,53 @@ The demo is shown below.
 
 The implementation is based on the great [controlnet extension for A1111](https://github.com/Mikubill/sd-webui-controlnet)
 
+The following figure shows the comparison between the ControlNet results and the ControlNet+PwW results for the boat examples. 
+
+<!-- #region -->
+<p align="center">
+<img  src="contents/cn_pww/cn_pww_boat.jpg">
+</p>
+<!-- #endregion -->
+
+Noting that the PwW make the background, e.g. aurora and mountains, more realistic as weight function scales increases. 
+
+The setups are detailed as follows
+
+Scribble and Segmentation map:
+
+<p float="middle">
+  <img src="contents/cn_pww/user1.png" width="300" />
+  <img src="contents/cn_pww/seg_map1.png" width="300" /> 
+</p>
+
+Prompts:
+
+> "A digital painting of a half-frozen lake near mountains under a full moon and aurora. A boat is in the middle of the lake. Highly detailed."
+
+Color contents: 
+
+> "{(7, 9, 182): "aurora,0.5,-1",(136, 178, 92): "full moon,1.5,-1",(51, 193, 217): "mountains,0.4,-1",(61, 163, 35): "a half-frozen lake,0.3,-1",(89, 102, 255): "boat,2.0,-1",}"
+
 ## Assign the material for the specific region in scribble
 
 The results of ControlNet+PwW are shown below. The left block shows the results of using only ControlNet while the right block shows those of ControlNet+PwW. Noting that the material of turtle shell specified by PwW is significantly improved showns in the right blocks.
 
-![pww_material 001](https://user-images.githubusercontent.com/42672685/225926958-42cf4d77-62c1-43c3-9cad-90763f571cba.jpeg)
+<!-- #region -->
+<p align="center">
+<img  src="contents/cn_pww/cn_pww_turtle.jpg">
+</p>
+<!-- #endregion -->
 
 Note that there are additional prompt: "its texture and grain need to be particularly emphasized." for these examples. Making the full prompts and color content shown as follows for the 3 cases respectively.
+
+The setups are detailed as follows:
+
+Scribble and Segmentation map:
+
+<p float="middle">
+  <img src="contents/cn_pww/user2.png" width="300" />
+  <img src="contents/cn_pww/seg_map2.png" width="300" /> 
+</p>
 
 Prompts:
 
@@ -406,7 +446,7 @@ Similar to the ui of PwW, one can prepare the color content by first clicking "E
 ![screencapture-127-0-0-1-7860-2023-03-16-15_43_25](https://user-images.githubusercontent.com/42672685/225548893-b1610bfa-2777-47b8-afdd-e2aa7fadae4a.png)
 
 In this extension, the regional-based seeding is not enables, thus the random seed for each object will not be retrieved (just leave it as -1).
-More importantly, please DO NOT use "," in object, for the same reason mentioned in gradio ui. Please leave object as "" if no object is assigned for the region.
+More importantly, please DO NOT use "," in object for the same reason mentioned in gradio ui. Please leave object as "" if no object is assigned for the region.
 
 ## Installation
 
