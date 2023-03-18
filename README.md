@@ -403,7 +403,7 @@ Color contents:
 
 ## Assign the material for the specific region in scribble
 
-The figure below show the comparison between ControlNet and ControlNet+PwW. The left block shows the results of using only ControlNet while the right block shows those of ControlNet+PwW. 
+One can use PwW to assign the material upon scribble, see the results comparing ControlNet and ControlNet+PwW below.
 
 <!-- #region -->
 <p align="center">
