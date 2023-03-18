@@ -380,13 +380,15 @@ The results of ControlNet+PwW are shown below. The left block shows the results 
 
 Note that there are additional prompt: "its texture and grain need to be particularly emphasized." for these examples. Making the full prompts and color content shown as follows for the 3 cases respectively.
 
+Prompts:
+
 > "A turtle with a shell made of metal and beechwood material, its texture and grain need to be particularly emphasized."
 
 > "A turtle with a shell made of wool and beechwood material, its texture and grain need to be particularly emphasized."
 
 > "A turtle with a shell made of cake and chocolate material, its texture and grain need to be particularly emphasized."
 
-Color content: 
+Color contents: 
 
 >"{(255, 255, 255):",0.5,-1",(89, 102, 255):"beechwood,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"metal,1.0,-1"}"
 
@@ -404,7 +406,7 @@ Similar to the ui of PwW, one can prepare the color content by first clicking "E
 ![screencapture-127-0-0-1-7860-2023-03-16-15_43_25](https://user-images.githubusercontent.com/42672685/225548893-b1610bfa-2777-47b8-afdd-e2aa7fadae4a.png)
 
 In this extension, the regional-based seeding is not enables, thus the random seed for each object will not be retrieved (just leave it as -1).
-More importantly, please DO NOT use "," in object, for the similar reason mentioned in gradio ui.
+More importantly, please DO NOT use "," in object, for the same reason mentioned in gradio ui. Please leave object as "" if no object is assigned for the region.
 
 ## Installation
 
