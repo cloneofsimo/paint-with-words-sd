@@ -372,6 +372,8 @@ The demo is shown below.
 
 The implementation is based on the great [controlnet extension for A1111](https://github.com/Mikubill/sd-webui-controlnet)
 
+## Benchmark of ControlNet + PwW
+
 The following figure shows the comparison between the ControlNet results and the ControlNet+PwW results for the boat examples. 
 
 <!-- #region -->
@@ -401,7 +403,7 @@ Color contents:
 
 ## Assign the material for the specific region in scribble
 
-The results of ControlNet+PwW are shown below. The left block shows the results of using only ControlNet while the right block shows those of ControlNet+PwW. Noting that the material of turtle shell specified by PwW is significantly improved showns in the right blocks.
+The figure below show the comparison between ControlNet and ControlNet+PwW. The left block shows the results of using only ControlNet while the right block shows those of ControlNet+PwW. Noting that the material of turtle shell specified by PwW is significantly improved showns in the right blocks.
 
 <!-- #region -->
 <p align="center">
