@@ -365,7 +365,7 @@ python gradio_pww_inpaint.py
 # Paint with Word (PwW) + ControlNet Extension for [AUTOMATIC1111(A1111) stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 
 This extension provide additional PwW control to ControlNet. See [sd-webui-controlnet-pww
-](https://github.com/lwchen6309/sd-webui-controlnet-pww) for the code.
+](https://github.com/lwchen6309/sd-webui-controlnet-pww) for the repo.
 
 The demo is shown below.
 
@@ -474,9 +474,7 @@ where path is the location of A1111 webui.
 ### (2) Setup pretrained model of ControlNet
 Please follow the instruction of [controlnet extension](https://github.com/Mikubill/sd-webui-controlnet) to get the pretrained models. 
 
-## Raising issues
-
-Please raise isssues at [here](https://github.com/lwchen6309/sd-webui-controlnet-pww) if you encounter any bug of this extension.
+#### IMPORTANT: This extension is currently NOT compatible with [ControlNet extension](https://github.com/Mikubill/sd-webui-controlnet) as reported at [this issue](https://github.com/cloneofsimo/paint-with-words-sd/issues/38). Hence, please disable the ControlNet extension before you start A1111 ui. This issue will be fixed ASAP.
 
 
 # TODO
