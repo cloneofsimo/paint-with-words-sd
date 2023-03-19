@@ -474,10 +474,6 @@ where path is the location of A1111 webui.
 ### (2) Setup pretrained model of ControlNet
 Please follow the instruction of [controlnet extension](https://github.com/Mikubill/sd-webui-controlnet) to get the pretrained models. 
 
-## Raising issues
-
-Please raise isssues at [here](https://github.com/lwchen6309/sd-webui-controlnet-pww) if you encounter any bug of this extension.
-
 
 # TODO
 
