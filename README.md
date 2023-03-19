@@ -365,7 +365,7 @@ python gradio_pww_inpaint.py
 # Paint with Word (PwW) + ControlNet Extension for [AUTOMATIC1111(A1111) stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 
 This extension provide additional PwW control to ControlNet. See [sd-webui-controlnet-pww
-](https://github.com/lwchen6309/sd-webui-controlnet-pww) for the repo.
+](https://github.com/lwchen6309/sd-webui-controlnet-pww) for the repo of this module.
 
 The demo is shown below.
 
@@ -412,46 +412,15 @@ One can use PwW to assign the material upon scribble, see the results comparing 
 </p>
 <!-- #endregion -->
 
-Noting that the material of turtle shell specified by PwW is significantly improved showns in the right blocks.
-
-The setups are detailed as follows:
-
-Scribble and Segmentation map:
-
-<p float="middle">
-  <img src="contents/cn_pww/user2.png" width="200" />
-  <img src="contents/cn_pww/seg_map2.png" width="200" /> 
+<!-- #region -->
+<p align="center">
+<img  src="contents/cn_pww/cn_pww_ballon.jpg">
 </p>
+<!-- #endregion -->
 
-Note that there are additional prompt: "its texture and grain need to be particularly emphasized." for these examples. Making the full prompts and color content shown as follows for the 3 cases respectively.
-
-Prompts:
-
-> "A turtle with a shell made of metal and beechwood material, its texture and grain need to be particularly emphasized."
-
-> "A turtle with a shell made of wool and beechwood material, its texture and grain need to be particularly emphasized."
-
-> "A turtle with a shell made of cake and chocolate material, its texture and grain need to be particularly emphasized."
-
-Color contents: 
-
->"{(255, 255, 255):",0.5,-1",(89, 102, 255):"beechwood,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"metal,1.0,-1"}"
-
-> "{(255, 255, 255):",0.5,-1",(89, 102, 255):"wool,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"beechwood,1.0,-1"}"
-
-> "{(255, 255, 255):",0.5,-1",(89, 102, 255):"cake,2.0,-1",(61, 163, 35):"turtle,1.5,-1",(51, 193, 217):"chocolate,1.0,-1"}"
-
-with random seed: 0, and weight function scale: 0.3
-
-
-## Preparing color content
-
-Similar to the ui of PwW, one can prepare the color content by first clicking "Extract color content" then "Generate olor content"
-
-![screencapture-127-0-0-1-7860-2023-03-16-15_43_25](https://user-images.githubusercontent.com/42672685/225548893-b1610bfa-2777-47b8-afdd-e2aa7fadae4a.png)
-
-In this extension, the regional-based seeding is not enables, thus the random seed for each object will not be retrieved (just leave it as -1).
-More importantly, please DO NOT use "," in object for the same reason mentioned in gradio ui. Please leave object as "" if no object is assigned for the region.
+Noting that the material of turtle shell specified by PwW is significantly improved showns in the right blocks.
+Please see [sd-webui-controlnet-pww
+](https://github.com/lwchen6309/sd-webui-controlnet-pww#assign-the-material-for-the-specific-region-in-scribble) for the experimental setups.
 
 ## Installation
 
@@ -474,7 +443,9 @@ where path is the location of A1111 webui.
 ### (2) Setup pretrained model of ControlNet
 Please follow the instruction of [controlnet extension](https://github.com/Mikubill/sd-webui-controlnet) to get the pretrained models. 
 
-#### IMPORTANT: This extension is currently NOT compatible with [ControlNet extension](https://github.com/Mikubill/sd-webui-controlnet) as reported at [this issue](https://github.com/cloneofsimo/paint-with-words-sd/issues/38). Hence, please disable the ControlNet extension before you start A1111 ui. This issue will be fixed ASAP.
+#### IMPORTANT: This extension is currently NOT compatible with [ControlNet extension](https://github.com/Mikubill/sd-webui-controlnet) as reported at [this issue](https://github.com/cloneofsimo/paint-with-words-sd/issues/38). Hence, please disable the ControlNet extension before you install ControlNet+PwW. This repo will sync the latest ControlNet extension and should therefore includes its original function. It is recommned to use only one of them to avoid the confliction. 
+
+However, one can still make them compatible by following [the instruction of installation](https://github.com/lwchen6309/sd-webui-controlnet-pww/tree/fc7b0e4471f1da491d12a2f12f3f0487bb671696#important-this-extension-is-currently-not-compatible-with-controlnet-extension-as-reported-at-this-issue-hence-please-disable-the-controlnet-extension-before-you-install-controlnetpww-this-repo-will-sync-the-latest-controlnet-extension-and-should-therefore-includes-its-original-function).
 
 
 # TODO
