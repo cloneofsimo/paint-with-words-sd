@@ -443,7 +443,7 @@ where path is the location of A1111 webui.
 ### (2) Setup pretrained model of ControlNet
 Please follow the instruction of [controlnet extension](https://github.com/Mikubill/sd-webui-controlnet) to get the pretrained models. 
 
-#### IMPORTANT: This extension is currently NOT compatible with [ControlNet extension](https://github.com/Mikubill/sd-webui-controlnet) as reported at [this issue](https://github.com/cloneofsimo/paint-with-words-sd/issues/38). Hence, please disable the ControlNet extension before you install ControlNet+PwW. This repo will sync the latest ControlNet extension and should therefore includes its original function.
+#### IMPORTANT: This extension is currently NOT compatible with [ControlNet extension](https://github.com/Mikubill/sd-webui-controlnet) as reported at [this issue](https://github.com/cloneofsimo/paint-with-words-sd/issues/38). Hence, please disable the ControlNet extension before you install ControlNet+PwW.
 
 However, one can still make them compatible by following [the instruction of installation](https://github.com/lwchen6309/sd-webui-controlnet-pww/tree/fc7b0e4471f1da491d12a2f12f3f0487bb671696#important-this-extension-is-currently-not-compatible-with-controlnet-extension-as-reported-at-this-issue-hence-please-disable-the-controlnet-extension-before-you-install-controlnetpww-this-repo-will-sync-the-latest-controlnet-extension-and-should-therefore-includes-its-original-function).
 
