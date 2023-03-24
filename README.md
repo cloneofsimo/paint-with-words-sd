@@ -228,7 +228,7 @@ EXAMPLE_SETTING_4_seed = {
 where the 3rd item of context are random seed for the object. Use -1 to follow the seed set in paint_with_words function. In this example the random seed of boat is set to 2077.
 
 # Image inpainting
-Following the previous example, the figure below shows the results of image inpainting with paint-with-pord
+Following the previous example, the figure below shows the results of image inpainting with paint-with-word
 <!-- #region -->
 <p align="center">
 <img  src="contents/pww_inpainting.jpg">
