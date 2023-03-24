@@ -400,7 +400,9 @@ Prompts:
 
 Color contents: 
 
-> "{(7, 9, 182): "aurora,0.5,-1",(136, 178, 92): "full moon,1.5,-1",(51, 193, 217): "mountains,0.4,-1",(61, 163, 35): "a half-frozen lake,0.3,-1",(89, 102, 255): "boat,2.0,-1",}"
+> "{(7, 9, 182): "aurora@0.5@-1",(136, 178, 92): "full moon@1.5@-1",(51, 193, 217): "mountains@0.4@-1",(61, 163, 35): "a half-frozen lake@0.3@-1",(89, 102, 255): "boat@2.0@-1",}"
+
+Note that A1111 extension now use "@" as separator instead of ",".
 
 ## Assign the material for the specific region in scribble
 
